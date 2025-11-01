@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    kotlin("plugin.parcelize")
 }
 
 android {
@@ -47,6 +48,23 @@ dependencies {
     // LLM Module (2.12MB) - includes llama.cpp with 7 ARM64 CPU variants
     implementation(files("libs/runanywhere-llm-llamacpp-release.aar"))
 
+    // Blockchain dependencies
+    implementation("org.web3j:core:4.9.8")
+
+    // Cryptography
+    implementation("org.bouncycastle:bcprov-jdk15on:1.70")
+
+    // JSON handling
+    implementation("com.google.code.gson:gson:2.11.0")
+
+    // QR Code generation
+    implementation("com.google.zxing:core:3.5.1")
+
+    // Charts for visualization
+    implementation("com.patrykandpatrick.vico:compose:1.13.1")
+    implementation("com.patrykandpatrick.vico:compose-m3:1.13.1")
+    implementation("com.patrykandpatrick.vico:core:1.13.1")
+
     // Required SDK dependencies (transitive dependencies from AARs)
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
@@ -68,9 +86,6 @@ dependencies {
     implementation("com.squareup.retrofit2:retrofit:2.11.0")
     implementation("com.squareup.retrofit2:converter-gson:2.11.0")
 
-    // Gson (required by SDK)
-    implementation("com.google.code.gson:gson:2.11.0")
-
     // Okio (required by SDK)
     implementation("com.squareup.okio:okio:3.9.1")
 
@@ -84,6 +99,12 @@ dependencies {
     // AndroidX Security (required by SDK)
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
+    // DataStore for preferences
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
+
+    // Navigation
+    implementation("androidx.navigation:navigation-compose:2.8.5")
+
     // Standard app dependencies
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -93,6 +114,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
+    implementation("androidx.compose.material:material-icons-extended:1.7.6")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
