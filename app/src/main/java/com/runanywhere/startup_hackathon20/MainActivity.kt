@@ -755,14 +755,15 @@ fun BlueCarbonMonitorHomepage(onNewProfileClick: () -> Unit) {
                     .fillMaxWidth()
                     .weight(1f)
                     .padding(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                horizontalArrangement = Arrangement.Center
             ) {
-                // Left Sidebar
+                // Centered Sidebar
                 Column(
                     modifier = Modifier
-                        .width(250.dp)
+                        .width(280.dp)
                         .fillMaxHeight(),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     // Photo Documentation Card
                     Box(
@@ -798,34 +799,29 @@ fun BlueCarbonMonitorHomepage(onNewProfileClick: () -> Unit) {
                                     contentDescription = "Captured Photo",
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(100.dp)
+                                        .height(120.dp)
                                         .clip(RoundedCornerShape(12.dp)),
                                     contentScale = ContentScale.Crop
                                 )
                                 Spacer(Modifier.height(8.dp))
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    modifier = Modifier.fillMaxWidth()
+                                Button(
+                                    onClick = {
+                                        showPhotoPreview = false
+                                        photoUri = null
+                                    },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color(0xFFF44336)
+                                    ),
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(8.dp)
                                 ) {
-                                    Button(
-                                        onClick = {
-                                            showPhotoPreview = false
-                                            photoUri = null
-                                        },
-                                        colors = ButtonDefaults.buttonColors(
-                                            containerColor = Color(0xFFF44336)
-                                        ),
-                                        modifier = Modifier.weight(1f),
-                                        shape = RoundedCornerShape(8.dp)
-                                    ) {
-                                        Icon(
-                                            Icons.Default.Delete,
-                                            null,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                        Spacer(Modifier.width(4.dp))
-                                        Text("Remove", style = MaterialTheme.typography.bodySmall)
-                                    }
+                                    Icon(
+                                        Icons.Default.Delete,
+                                        null,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(Modifier.width(4.dp))
+                                    Text("Remove", style = MaterialTheme.typography.bodySmall)
                                 }
                             } else {
                                 Row(
@@ -835,34 +831,56 @@ fun BlueCarbonMonitorHomepage(onNewProfileClick: () -> Unit) {
                                     Button(
                                         onClick = { capturePhoto() },
                                         colors = ButtonDefaults.buttonColors(
-                                            containerColor = PrimaryGreen.copy(alpha = 0.93f)
+                                            containerColor = PrimaryGreen
                                         ),
                                         shape = RoundedCornerShape(8.dp),
-                                        modifier = Modifier.weight(1f)
+                                        modifier = Modifier.weight(1f),
+                                        contentPadding = PaddingValues(8.dp)
                                     ) {
-                                        Icon(Icons.Default.CameraAlt, null)
-                                        Spacer(Modifier.width(4.dp))
-                                        Text("Capture photo")
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.Center
+                                        ) {
+                                            Icon(
+                                                Icons.Default.CameraAlt,
+                                                null,
+                                                modifier = Modifier.size(24.dp)
+                                            )
+                                            Spacer(Modifier.height(4.dp))
+                                            Text(
+                                                "Capture\nphoto",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                textAlign = TextAlign.Center
+                                            )
+                                        }
                                     }
                                     Button(
                                         onClick = { pickFromGallery() },
                                         colors = ButtonDefaults.buttonColors(
-                                            containerColor = PrimaryBlue.copy(alpha = 0.93f)
+                                            containerColor = PrimaryBlue
                                         ),
                                         shape = RoundedCornerShape(8.dp),
-                                        modifier = Modifier.weight(1f)
+                                        modifier = Modifier.weight(1f),
+                                        contentPadding = PaddingValues(8.dp)
                                     ) {
-                                        Icon(Icons.Default.Photo, null)
-                                        Spacer(Modifier.width(4.dp))
-                                        Text("Upload from Gallery")
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.Center
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Photo,
+                                                null,
+                                                modifier = Modifier.size(24.dp)
+                                            )
+                                            Spacer(Modifier.height(4.dp))
+                                            Text(
+                                                "Upload\nfrom\nGallery",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                textAlign = TextAlign.Center
+                                            )
+                                        }
                                     }
                                 }
-                                Spacer(Modifier.height(8.dp))
-                                Text(
-                                    "No photo captured yet.",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = TextSecondary
-                                )
                             }
                         }
                     }
@@ -1013,55 +1031,6 @@ fun BlueCarbonMonitorHomepage(onNewProfileClick: () -> Unit) {
                                     color = TextPrimary
                                 )
                             }
-                        }
-                    }
-                }
-
-                // Main Photo Capture Area
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                        .glassEffect()
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        if (photoUri != null && showPhotoPreview) {
-                            AsyncImage(
-                                model = photoUri,
-                                contentDescription = "Preview Image",
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .fillMaxHeight(0.7f)
-                                    .clip(RoundedCornerShape(12.dp)),
-                                contentScale = ContentScale.Fit
-                            )
-                            Spacer(Modifier.height(16.dp))
-                            Text(
-                                "Photo ready for upload",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = PrimaryGreen,
-                                fontWeight = FontWeight.Bold
-                            )
-                        } else {
-                            Icon(
-                                Icons.Default.Face,
-                                contentDescription = null,
-                                tint = TextSecondary.copy(alpha = 0.5f),
-                                modifier = Modifier.size(80.dp)
-                            )
-                            Spacer(Modifier.height(16.dp))
-                            Text(
-                                "Capture or upload image using the buttons",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = TextSecondary,
-                                textAlign = TextAlign.Center
-                            )
                         }
                     }
                 }
