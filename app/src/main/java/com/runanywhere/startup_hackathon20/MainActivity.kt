@@ -705,35 +705,34 @@ fun BlueCarbonMonitorHomepage(onNewProfileClick: () -> Unit) {
         Column(
             modifier = Modifier.fillMaxSize()
         ) {
-            // Top Bar
-            Row(
+            // Top Bar - Centered
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
-                horizontalArrangement = Arrangement.Start,
-                verticalAlignment = Alignment.CenterVertically
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Column {
-                    Text(
-                        "Blue Carbon Monitor",
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary
-                    )
-                    Text(
-                        selectedSite,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = TextSecondary
-                    )
-                }
+                Text(
+                    "Blue Carbon Monitor",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary,
+                    textAlign = TextAlign.Center
+                )
+                Text(
+                    selectedSite,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextSecondary,
+                    textAlign = TextAlign.Center
+                )
             }
 
-            // New Profile Button repositioned here
+            // New Profile Button - Centered
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 4.dp),
-                contentAlignment = Alignment.CenterStart
+                contentAlignment = Alignment.Center
             ) {
                 Button(
                     onClick = onNewProfileClick,
@@ -749,19 +748,19 @@ fun BlueCarbonMonitorHomepage(onNewProfileClick: () -> Unit) {
                 }
             }
 
-            // Main Content Area
-            Row(
+            // Main Content Area - Centered
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
                     .padding(16.dp),
-                horizontalArrangement = Arrangement.Center
+                contentAlignment = Alignment.TopCenter
             ) {
-                // Centered Sidebar
+                // Centered Column with fixed width for all cards
                 Column(
                     modifier = Modifier
-                        .width(280.dp)
-                        .fillMaxHeight(),
+                        .width(320.dp)
+                        .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
@@ -882,6 +881,39 @@ fun BlueCarbonMonitorHomepage(onNewProfileClick: () -> Unit) {
                                     }
                                 }
                             }
+                        }
+                    }
+
+                    // Upload to Analysis Button - Right after Photo Documentation
+                    Button(
+                        onClick = { uploadToAnalysis() },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = AccentEmerald
+                        ),
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        enabled = !isUploading && photoUri != null
+                    ) {
+                        if (isUploading) {
+                            CircularProgressIndicator(
+                                color = Color.White,
+                                modifier = Modifier.size(24.dp),
+                                strokeWidth = 2.dp
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                "Uploading...",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                        } else {
+                            Icon(Icons.Default.Send, null)
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                "Upload to Analysis",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
                     }
 
@@ -1032,46 +1064,6 @@ fun BlueCarbonMonitorHomepage(onNewProfileClick: () -> Unit) {
                                 )
                             }
                         }
-                    }
-                }
-            }
-
-            // Bottom Button
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Button(
-                    onClick = { uploadToAnalysis() },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = AccentEmerald
-                    ),
-                    modifier = Modifier.width(280.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    enabled = !isUploading && photoUri != null
-                ) {
-                    if (isUploading) {
-                        CircularProgressIndicator(
-                            color = Color.White,
-                            modifier = Modifier.size(24.dp),
-                            strokeWidth = 2.dp
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            "Uploading...",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                    } else {
-                        Icon(Icons.Default.Send, null)
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            "Upload to Analysis",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
                     }
                 }
             }
