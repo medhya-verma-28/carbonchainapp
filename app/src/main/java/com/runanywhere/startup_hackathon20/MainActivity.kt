@@ -1,8 +1,15 @@
 package com.runanywhere.startup_hackathon20
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.location.Location
+import android.net.Uri
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
@@ -28,16 +35,25 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
+import coil.compose.AsyncImage
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
+import com.google.android.gms.tasks.CancellationTokenSource
 import com.runanywhere.startup_hackathon20.data.*
 import com.runanywhere.startup_hackathon20.ui.theme.Startup_hackathon20Theme
 import com.runanywhere.startup_hackathon20.viewmodel.CarbonViewModel
 import com.runanywhere.startup_hackathon20.viewmodel.UiState
+import java.io.File
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.*
@@ -535,10 +551,121 @@ fun GlassLoginTypeCard(
 
 @Composable
 fun BlueCarbonMonitorHomepage(onNewProfileClick: () -> Unit) {
+    val context = LocalContext.current
     var selectedSite by remember { mutableStateOf("Mangrove Restoration Site") }
-    var photoPath by remember { mutableStateOf<String?>(null) }
-    var latitude by remember { mutableStateOf("12.971°") }
-    var longitude by remember { mutableStateOf("77.594°") }
+    var photoUri by remember { mutableStateOf<Uri?>(null) }
+    var latitude by remember { mutableStateOf<String?>(null) }
+    var longitude by remember { mutableStateOf<String?>(null) }
+    var isGettingLocation by remember { mutableStateOf(false) }
+    var isUploading by remember { mutableStateOf(false) }
+    var showPhotoPreview by remember { mutableStateOf(false) }
+
+    // Create photo file (using remember for stable file across recompositions)
+    val photoFile = remember {
+        val ts = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
+        val fileName = "carbon_photo_$ts.jpg"
+        File(context.cacheDir, fileName)
+    }
+
+    // Create URI for camera
+    val uri = remember {
+        FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            photoFile
+        )
+    }
+
+    // Camera launcher
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success) {
+            photoUri = uri
+            showPhotoPreview = true
+            Toast.makeText(context, "Photo captured!", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(context, "Failed to capture photo", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // Camera permission launcher
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            cameraLauncher.launch(uri)
+        } else {
+            Toast.makeText(context, "Camera permission required", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // Location permission launcher  
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            getLocation(context) { lat, lon ->
+                latitude = lat
+                longitude = lon
+                isGettingLocation = false
+                Toast.makeText(context, "Location updated!", Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            isGettingLocation = false
+            Toast.makeText(context, "Location permission required", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // Camera capture function
+    fun capturePhoto() {
+        when {
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.CAMERA
+            ) == PackageManager.PERMISSION_GRANTED -> {
+                cameraLauncher.launch(uri)
+            }
+            else -> {
+                cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+            }
+        }
+    }
+
+    // Location update function
+    fun updateLocation() {
+        isGettingLocation = true
+        when {
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED -> {
+                getLocation(context) { lat, lon ->
+                    latitude = lat
+                    longitude = lon
+                    isGettingLocation = false
+                    Toast.makeText(context, "Location updated!", Toast.LENGTH_SHORT).show()
+                }
+            }
+            else -> {
+                locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+            }
+        }
+    }
+
+    // Upload simulation
+    fun uploadToAnalysis() {
+        if (photoUri == null) {
+            Toast.makeText(context, "Please capture a photo first", Toast.LENGTH_SHORT).show()
+            return
+        }
+        isUploading = true
+        // Simulate upload
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            isUploading = false
+            Toast.makeText(context, "Uploaded to analysis!", Toast.LENGTH_SHORT).show()
+        }, 1500)
+    }
 
     Box(
         modifier = Modifier
@@ -614,7 +741,8 @@ fun BlueCarbonMonitorHomepage(onNewProfileClick: () -> Unit) {
                             .glassEffect()
                     ) {
                         Column(
-                            modifier = Modifier.padding(16.dp)
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
@@ -631,6 +759,40 @@ fun BlueCarbonMonitorHomepage(onNewProfileClick: () -> Unit) {
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = TextPrimary
+                                )
+                            }
+
+                            if (photoUri != null && showPhotoPreview) {
+                                AsyncImage(
+                                    model = photoUri,
+                                    contentDescription = "Captured Photo",
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(100.dp)
+                                        .clip(RoundedCornerShape(12.dp)),
+                                    contentScale = ContentScale.Crop
+                                )
+                                Spacer(Modifier.height(8.dp))
+                                Button(
+                                    onClick = {
+                                        showPhotoPreview = false
+                                        photoUri = null
+                                    },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color(0xFFF44336)
+                                    ),
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Icon(Icons.Default.Delete, null, modifier = Modifier.size(16.dp))
+                                    Spacer(Modifier.width(4.dp))
+                                    Text("Remove", style = MaterialTheme.typography.bodySmall)
+                                }
+                            } else {
+                                Text(
+                                    "No photo captured yet.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = TextSecondary
                                 )
                             }
                         }
@@ -670,24 +832,43 @@ fun BlueCarbonMonitorHomepage(onNewProfileClick: () -> Unit) {
                                 color = TextSecondary
                             )
 
-                            Text(
-                                "$latitude E ${longitude.replace(".", "°")}",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = TextPrimary,
-                                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
-                            )
+                            if (latitude != null && longitude != null) {
+                                Text(
+                                    "$latitude, $longitude",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = TextPrimary,
+                                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                                )
+                            } else {
+                                Text(
+                                    "Not available",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = TextSecondary
+                                )
+                            }
 
                             Button(
-                                onClick = { /* Update location */ },
+                                onClick = { updateLocation() },
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = PrimaryBlue
                                 ),
                                 modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(8.dp)
+                                shape = RoundedCornerShape(8.dp),
+                                enabled = !isGettingLocation
                             ) {
-                                Icon(Icons.Default.Refresh, null, modifier = Modifier.size(16.dp))
-                                Spacer(Modifier.width(4.dp))
-                                Text("Update Location", style = MaterialTheme.typography.bodySmall)
+                                if (isGettingLocation) {
+                                    CircularProgressIndicator(
+                                        color = Color.White,
+                                        modifier = Modifier.size(16.dp),
+                                        strokeWidth = 2.dp
+                                    )
+                                    Spacer(Modifier.width(6.dp))
+                                    Text("Locating...", style = MaterialTheme.typography.bodySmall)
+                                } else {
+                                    Icon(Icons.Default.Refresh, null, modifier = Modifier.size(16.dp))
+                                    Spacer(Modifier.width(4.dp))
+                                    Text("Update Location", style = MaterialTheme.typography.bodySmall)
+                                }
                             }
                         }
                     }
@@ -733,10 +914,13 @@ fun BlueCarbonMonitorHomepage(onNewProfileClick: () -> Unit) {
                                 Box(
                                     modifier = Modifier
                                         .size(8.dp)
-                                        .background(AccentGreen, CircleShape)
+                                        .background(
+                                            if (latitude != null && longitude != null) AccentGreen else Color.Gray,
+                                            CircleShape
+                                        )
                                 )
                                 Text(
-                                    "GPS coordinates",
+                                    if (latitude != null && longitude != null) "GPS coordinates" else "GPS pending",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = TextPrimary
                                 )
@@ -749,10 +933,13 @@ fun BlueCarbonMonitorHomepage(onNewProfileClick: () -> Unit) {
                                 Box(
                                     modifier = Modifier
                                         .size(8.dp)
-                                        .background(AccentGreen, CircleShape)
+                                        .background(
+                                            if (photoUri != null) AccentGreen else Color.Gray,
+                                            CircleShape
+                                        )
                                 )
                                 Text(
-                                    "Satellite.xml",
+                                    if (photoUri != null) "Photo captured" else "Awaiting photo",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = TextPrimary
                                 )
@@ -767,6 +954,7 @@ fun BlueCarbonMonitorHomepage(onNewProfileClick: () -> Unit) {
                         .weight(1f)
                         .fillMaxHeight()
                         .glassEffect()
+                        .clickable { capturePhoto() }
                 ) {
                     Column(
                         modifier = Modifier
@@ -775,18 +963,37 @@ fun BlueCarbonMonitorHomepage(onNewProfileClick: () -> Unit) {
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-                        Icon(
-                            Icons.Default.Face,
-                            contentDescription = null,
-                            tint = TextSecondary.copy(alpha = 0.5f),
-                            modifier = Modifier.size(80.dp)
-                        )
-                        Spacer(Modifier.height(16.dp))
-                        Text(
-                            "Tap to capture image or photo",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = TextSecondary
-                        )
+                        if (photoUri != null && showPhotoPreview) {
+                            AsyncImage(
+                                model = photoUri,
+                                contentDescription = "Preview Image",
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .fillMaxHeight(0.7f)
+                                    .clip(RoundedCornerShape(12.dp)),
+                                contentScale = ContentScale.Fit
+                            )
+                            Spacer(Modifier.height(16.dp))
+                            Text(
+                                "Photo ready for upload",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = AccentGreen,
+                                fontWeight = FontWeight.Bold
+                            )
+                        } else {
+                            Icon(
+                                Icons.Default.Face,
+                                contentDescription = null,
+                                tint = TextSecondary.copy(alpha = 0.5f),
+                                modifier = Modifier.size(80.dp)
+                            )
+                            Spacer(Modifier.height(16.dp))
+                            Text(
+                                "Tap to capture image or photo",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = TextSecondary
+                            )
+                        }
                     }
                 }
             }
@@ -799,21 +1006,60 @@ fun BlueCarbonMonitorHomepage(onNewProfileClick: () -> Unit) {
                 contentAlignment = Alignment.Center
             ) {
                 Button(
-                    onClick = { /* Upload to analysis */ },
+                    onClick = { uploadToAnalysis() },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = AccentGreen
                     ),
                     modifier = Modifier.width(280.dp),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
+                    enabled = !isUploading && photoUri != null
                 ) {
-                    Icon(Icons.Default.Send, null)
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        "Upload to Analysis",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
+                    if (isUploading) {
+                        CircularProgressIndicator(
+                            color = Color.White,
+                            modifier = Modifier.size(24.dp),
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            "Uploading...",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    } else {
+                        Icon(Icons.Default.Send, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            "Upload to Analysis",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
+            }
+        }
+    }
+}
+
+// Helper function to get location
+private fun getLocation(
+    context: android.content.Context,
+    onResult: (String, String) -> Unit
+) {
+    val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
+    if (ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+    ) {
+        fusedLocationClient.getCurrentLocation(
+            Priority.PRIORITY_HIGH_ACCURACY,
+            CancellationTokenSource().token
+        ).addOnSuccessListener { location: Location? ->
+            location?.let {
+                val lat = "%.5f°".format(it.latitude)
+                val lon = "%.5f°".format(it.longitude)
+                onResult(lat, lon)
             }
         }
     }

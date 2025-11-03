@@ -60,6 +60,12 @@ dependencies {
     // QR Code generation
     implementation("com.google.zxing:core:3.5.1")
 
+    // Coil for image loading
+    implementation("io.coil-kt:coil-compose:2.5.0")
+
+    // Google Play Services for Location
+    implementation("com.google.android.gms:play-services-location:21.1.0")
+
     // Charts for visualization
     implementation("com.patrykandpatrick.vico:compose:1.13.1")
     implementation("com.patrykandpatrick.vico:compose-m3:1.13.1")
