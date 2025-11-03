@@ -37,7 +37,8 @@ class CarbonViewModel : ViewModel() {
     data class AuthState(
         val isAuthenticated: Boolean = false,
         val userType: UserType? = null,
-        val username: String? = null
+        val username: String? = null,
+        val email: String? = null
     )
 
     enum class UserType {
@@ -208,7 +209,8 @@ class CarbonViewModel : ViewModel() {
                 _authState.value = AuthState(
                     isAuthenticated = true,
                     userType = UserType.USER,
-                    username = username
+                    username = username,
+                    email = email
                 )
                 _uiState.value = UiState.Success("Registration successful! Welcome $username")
             } else {

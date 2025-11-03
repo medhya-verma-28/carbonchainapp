@@ -14,12 +14,15 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
@@ -39,44 +42,81 @@ import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.*
 
+// Dark Theme Colors
+val DarkBackground = Color(0xFF0A0E27)
+val DarkSurface = Color(0xFF151932)
+val PrimaryPurple = Color(0xFF6366F1)
+val PrimaryBlue = Color(0xFF3B82F6)
+val AccentGreen = Color(0xFF10B981)
+val AccentOrange = Color(0xFFF59E0B)
+val GlassWhite = Color(0xFFFFFFFF)
+val TextPrimary = Color(0xFFFFFFFF)
+val TextSecondary = Color(0xFFB4B4C8)
+
 class MainActivity : ComponentActivity() {
     private val viewModel: CarbonViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            Startup_hackathon20Theme {
+            Startup_hackathon20Theme(darkTheme = true) {
                 MainApp(viewModel)
             }
         }
     }
 }
 
+// Glass Effect Modifier
+fun Modifier.glassEffect() = this
+    .background(
+        color = Color.White.copy(alpha = 0.1f),
+        shape = RoundedCornerShape(20.dp)
+    )
+    .border(
+        width = 1.dp,
+        color = Color.White.copy(alpha = 0.2f),
+        shape = RoundedCornerShape(20.dp)
+    )
+
 @Composable
 fun MainApp(viewModel: CarbonViewModel) {
     val authState by viewModel.authState.collectAsState()
+    var showLoginScreen by remember { mutableStateOf(false) }
     
-    AnimatedContent(
-        targetState = authState.isAuthenticated,
-        transitionSpec = {
-            fadeIn(animationSpec = tween(1000)) + slideInHorizontally(
-                animationSpec = tween(1000),
-                initialOffsetX = { it }
-            ) togetherWith fadeOut(animationSpec = tween(1000))
-        },
-        label = "auth_transition"
-    ) { isAuthenticated ->
-        if (isAuthenticated) {
-            CarbonRegistryApp(viewModel)
-        } else {
-            LoginScreen(viewModel)
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = DarkBackground
+    ) {
+        when {
+            !authState.isAuthenticated && !showLoginScreen -> {
+                // Show Blue Carbon Monitor Homepage first
+                BlueCarbonMonitorHomepage(
+                    onNewProfileClick = { showLoginScreen = true }
+                )
+            }
+
+            !authState.isAuthenticated && showLoginScreen -> {
+                // Show Login Screen
+                LoginScreen(
+                    viewModel = viewModel,
+                    onBack = { showLoginScreen = false }
+                )
+            }
+
+            else -> {
+                // Show Main App based on user role
+                CarbonRegistryApp(viewModel)
+            }
         }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LoginScreen(viewModel: CarbonViewModel) {
+fun LoginScreen(
+    viewModel: CarbonViewModel,
+    onBack: () -> Unit
+) {
     var selectedLoginType by remember { mutableStateOf<LoginType?>(null) }
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -84,18 +124,6 @@ fun LoginScreen(viewModel: CarbonViewModel) {
     var passwordVisible by remember { mutableStateOf(false) }
     var isRegistering by remember { mutableStateOf(false) }
     val uiState by viewModel.uiState.collectAsState()
-    
-    // Animation states
-    val infiniteTransition = rememberInfiniteTransition(label = "background")
-    val animatedOffset by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1000f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(20000, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "offset"
-    )
     
     val snackbarHostState = remember { SnackbarHostState() }
     
@@ -110,48 +138,47 @@ fun LoginScreen(viewModel: CarbonViewModel) {
     }
     
     Scaffold(
+        containerColor = Color.Transparent,
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
-                    Brush.linearGradient(
+                    Brush.verticalGradient(
                         colors = listOf(
-                            Color(0xFF1A237E),
-                            Color(0xFF283593),
-                            Color(0xFF303F9F),
-                            Color(0xFF3949AB)
-                        ),
-                        start = androidx.compose.ui.geometry.Offset(animatedOffset, animatedOffset),
-                        end = androidx.compose.ui.geometry.Offset(
-                            animatedOffset + 1000f,
-                            animatedOffset + 1000f
+                            Color(0xFF1E1B4B),
+                            Color(0xFF312E81),
+                            Color(0xFF4338CA),
+                            Color(0xFF6366F1)
                         )
                     )
                 )
                 .padding(padding)
         ) {
-            // Animated background circles
+            // Animated gradient blobs for glass effect background
+            Box(
+                modifier = Modifier
+                    .size(400.dp)
+                    .offset(x = (-100).dp, y = (-150).dp)
+                    .background(PrimaryPurple.copy(alpha = 0.3f), CircleShape)
+                    .blur(100.dp)
+            )
+            Box(
+                modifier = Modifier
+                    .size(350.dp)
+                    .align(Alignment.TopEnd)
+                    .offset(x = 100.dp, y = 50.dp)
+                    .background(PrimaryBlue.copy(alpha = 0.3f), CircleShape)
+                    .blur(100.dp)
+            )
             Box(
                 modifier = Modifier
                     .size(300.dp)
-                    .offset(x = (-50).dp, y = (-50).dp)
-                    .background(Color.White.copy(alpha = 0.05f), CircleShape)
-            )
-            Box(
-                modifier = Modifier
-                    .size(200.dp)
-                    .align(Alignment.TopEnd)
-                    .offset(x = 50.dp, y = 100.dp)
-                    .background(Color.White.copy(alpha = 0.05f), CircleShape)
-            )
-            Box(
-                modifier = Modifier
-                    .size(250.dp)
                     .align(Alignment.BottomStart)
-                    .offset(x = (-80).dp, y = 80.dp)
-                    .background(Color.White.copy(alpha = 0.05f), CircleShape)
+                    .offset(x = (-50).dp, y = 100.dp)
+                    .background(AccentGreen.copy(alpha = 0.2f), CircleShape)
+                    .blur(100.dp)
             )
             
             Column(
@@ -162,24 +189,25 @@ fun LoginScreen(viewModel: CarbonViewModel) {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
+                // Top Bar Back Button
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Start
+                ) {
+                    IconButton(onClick = { onBack() }) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            "Back",
+                            tint = TextPrimary
+                        )
+                    }
+                }
                 // Logo and Title
-                val scale by rememberInfiniteTransition(label = "logo").animateFloat(
-                    initialValue = 1f,
-                    targetValue = 1.1f,
-                    animationSpec = infiniteRepeatable(
-                        animation = tween(2000, easing = FastOutSlowInEasing),
-                        repeatMode = RepeatMode.Reverse
-                    ),
-                    label = "scale"
-                )
-                
                 Icon(
                     Icons.Default.Star,
                     contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier
-                        .size(80.dp)
-                        .scale(scale)
+                    tint = TextPrimary,
+                    modifier = Modifier.size(80.dp)
                 )
                 
                 Spacer(Modifier.height(16.dp))
@@ -188,13 +216,13 @@ fun LoginScreen(viewModel: CarbonViewModel) {
                     "Carbon Registry",
                     style = MaterialTheme.typography.headlineLarge,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = TextPrimary
                 )
                 
                 Text(
                     "Blockchain Carbon Credit Platform",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.8f)
+                    color = TextSecondary
                 )
                 
                 Spacer(Modifier.height(48.dp))
@@ -203,16 +231,14 @@ fun LoginScreen(viewModel: CarbonViewModel) {
                 AnimatedContent(
                     targetState = selectedLoginType,
                     transitionSpec = {
-                        fadeIn(animationSpec = tween(500)) + slideInVertically(
-                            animationSpec = tween(500),
-                            initialOffsetY = { it / 2 }
-                        ) togetherWith fadeOut(animationSpec = tween(500))
+                        fadeIn(animationSpec = tween(500)) + 
+                        slideInVertically { it / 2 } togetherWith 
+                        fadeOut(animationSpec = tween(500))
                     },
-                    label = "login_type_transition"
+                    label = "login_type"
                 ) { loginType ->
                     when (loginType) {
                         null -> {
-                            // Login Type Selection
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -221,38 +247,35 @@ fun LoginScreen(viewModel: CarbonViewModel) {
                                     "Select Login Type",
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color.White
+                                    color = TextPrimary
                                 )
                                 
                                 Spacer(Modifier.height(8.dp))
                                 
-                                LoginTypeCard(
+                                GlassLoginTypeCard(
                                     icon = Icons.Default.Person,
                                     title = "User Login",
                                     description = "Access carbon credits and manage your portfolio",
-                                    color = Color(0xFF4CAF50),
+                                    accentColor = AccentGreen,
                                     onClick = { selectedLoginType = LoginType.USER }
                                 )
                                 
-                                LoginTypeCard(
+                                GlassLoginTypeCard(
                                     icon = Icons.Default.Settings,
                                     title = "Admin Login",
                                     description = "Manage projects, verify credits, and oversee operations",
-                                    color = Color(0xFFFF9800),
+                                    accentColor = AccentOrange,
                                     onClick = { selectedLoginType = LoginType.ADMIN }
                                 )
                             }
                         }
                         else -> {
-                            // Login Form
-                            Card(
+                            // Login Form with Glass Effect
+                            Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .animateContentSize(),
-                                shape = RoundedCornerShape(24.dp),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = Color.White.copy(alpha = 0.95f)
-                                )
+                                    .glassEffect()
+                                    .animateContentSize()
                             ) {
                                 Column(
                                     modifier = Modifier
@@ -260,7 +283,6 @@ fun LoginScreen(viewModel: CarbonViewModel) {
                                         .padding(24.dp),
                                     horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
-                                    // Back Button
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -273,13 +295,17 @@ fun LoginScreen(viewModel: CarbonViewModel) {
                                             password = ""
                                             email = ""
                                         }) {
-                                            Icon(Icons.Default.ArrowBack, "Back")
+                                            Icon(
+                                                Icons.AutoMirrored.Filled.ArrowBack,
+                                                "Back",
+                                                tint = TextPrimary
+                                            )
                                         }
                                         
                                         Icon(
                                             if (loginType == LoginType.ADMIN) Icons.Default.Settings else Icons.Default.Person,
                                             contentDescription = null,
-                                            tint = if (loginType == LoginType.ADMIN) Color(0xFFFF9800) else Color(0xFF4CAF50),
+                                            tint = if (loginType == LoginType.ADMIN) AccentOrange else AccentGreen,
                                             modifier = Modifier.size(32.dp)
                                         )
                                     }
@@ -289,7 +315,8 @@ fun LoginScreen(viewModel: CarbonViewModel) {
                                     Text(
                                         if (isRegistering) "Create Account" else "${loginType.name.lowercase().replaceFirstChar { it.uppercase() }} Login",
                                         style = MaterialTheme.typography.headlineSmall,
-                                        fontWeight = FontWeight.Bold
+                                        fontWeight = FontWeight.Bold,
+                                        color = TextPrimary
                                     )
                                     
                                     Spacer(Modifier.height(24.dp))
@@ -298,25 +325,36 @@ fun LoginScreen(viewModel: CarbonViewModel) {
                                     OutlinedTextField(
                                         value = username,
                                         onValueChange = { username = it },
-                                        label = { Text("Username") },
-                                        leadingIcon = { Icon(Icons.Default.Person, null) },
+                                        label = { Text("Username", color = TextSecondary) },
+                                        leadingIcon = { Icon(Icons.Default.Person, null, tint = TextSecondary) },
                                         modifier = Modifier.fillMaxWidth(),
                                         singleLine = true,
-                                        shape = RoundedCornerShape(12.dp)
+                                        shape = RoundedCornerShape(12.dp),
+                                        colors = OutlinedTextFieldDefaults.colors(
+                                            focusedTextColor = TextPrimary,
+                                            unfocusedTextColor = TextPrimary,
+                                            focusedBorderColor = PrimaryPurple,
+                                            unfocusedBorderColor = Color.White.copy(alpha = 0.3f)
+                                        )
                                     )
                                     
                                     Spacer(Modifier.height(16.dp))
                                     
-                                    // Email Field (only for registration)
                                     if (isRegistering && loginType == LoginType.USER) {
                                         OutlinedTextField(
                                             value = email,
                                             onValueChange = { email = it },
-                                            label = { Text("Email") },
-                                            leadingIcon = { Icon(Icons.Default.Email, null) },
+                                            label = { Text("Email", color = TextSecondary) },
+                                            leadingIcon = { Icon(Icons.Default.Email, null, tint = TextSecondary) },
                                             modifier = Modifier.fillMaxWidth(),
                                             singleLine = true,
-                                            shape = RoundedCornerShape(12.dp)
+                                            shape = RoundedCornerShape(12.dp),
+                                            colors = OutlinedTextFieldDefaults.colors(
+                                                focusedTextColor = TextPrimary,
+                                                unfocusedTextColor = TextPrimary,
+                                                focusedBorderColor = PrimaryPurple,
+                                                unfocusedBorderColor = Color.White.copy(alpha = 0.3f)
+                                            )
                                         )
                                         
                                         Spacer(Modifier.height(16.dp))
@@ -326,20 +364,27 @@ fun LoginScreen(viewModel: CarbonViewModel) {
                                     OutlinedTextField(
                                         value = password,
                                         onValueChange = { password = it },
-                                        label = { Text("Password") },
-                                        leadingIcon = { Icon(Icons.Default.Lock, null) },
+                                        label = { Text("Password", color = TextSecondary) },
+                                        leadingIcon = { Icon(Icons.Default.Lock, null, tint = TextSecondary) },
                                         trailingIcon = {
                                             IconButton(onClick = { passwordVisible = !passwordVisible }) {
                                                 Icon(
                                                     if (passwordVisible) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                                    "Toggle password visibility"
+                                                    "Toggle",
+                                                    tint = TextSecondary
                                                 )
                                             }
                                         },
                                         visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                                         modifier = Modifier.fillMaxWidth(),
                                         singleLine = true,
-                                        shape = RoundedCornerShape(12.dp)
+                                        shape = RoundedCornerShape(12.dp),
+                                        colors = OutlinedTextFieldDefaults.colors(
+                                            focusedTextColor = TextPrimary,
+                                            unfocusedTextColor = TextPrimary,
+                                            focusedBorderColor = PrimaryPurple,
+                                            unfocusedBorderColor = Color.White.copy(alpha = 0.3f)
+                                        )
                                     )
                                     
                                     Spacer(Modifier.height(24.dp))
@@ -357,7 +402,7 @@ fun LoginScreen(viewModel: CarbonViewModel) {
                                             .fillMaxWidth()
                                             .height(56.dp),
                                         colors = ButtonDefaults.buttonColors(
-                                            containerColor = if (loginType == LoginType.ADMIN) Color(0xFFFF9800) else Color(0xFF4CAF50)
+                                            containerColor = if (loginType == LoginType.ADMIN) AccentOrange else AccentGreen
                                         ),
                                         shape = RoundedCornerShape(12.dp),
                                         enabled = username.isNotBlank() && password.isNotBlank() && 
@@ -379,15 +424,11 @@ fun LoginScreen(viewModel: CarbonViewModel) {
                                                     fontWeight = FontWeight.Bold
                                                 )
                                                 Spacer(Modifier.width(8.dp))
-                                                Icon(
-                                                    Icons.AutoMirrored.Filled.ArrowForward,
-                                                    contentDescription = null
-                                                )
+                                                Icon(Icons.AutoMirrored.Filled.ArrowForward, null)
                                             }
                                         }
                                     }
                                     
-                                    // Toggle between login and register (only for users)
                                     if (loginType == LoginType.USER) {
                                         Spacer(Modifier.height(16.dp))
                                         
@@ -400,18 +441,17 @@ fun LoginScreen(viewModel: CarbonViewModel) {
                                         ) {
                                             Text(
                                                 if (isRegistering) "Already have an account? Login" else "Don't have an account? Register",
-                                                color = Color(0xFF4CAF50)
+                                                color = AccentGreen
                                             )
                                         }
                                     }
                                     
-                                    // Admin hint
                                     if (loginType == LoginType.ADMIN) {
                                         Spacer(Modifier.height(8.dp))
                                         Text(
                                             "Default: admin / admin123",
                                             style = MaterialTheme.typography.bodySmall,
-                                            color = Color.Gray,
+                                            color = TextSecondary,
                                             textAlign = TextAlign.Center
                                         )
                                     }
@@ -423,11 +463,10 @@ fun LoginScreen(viewModel: CarbonViewModel) {
                 
                 Spacer(Modifier.height(32.dp))
                 
-                // Footer
                 Text(
                     "Built with ❤️ for a sustainable future",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.6f)
+                    color = TextSecondary
                 )
             }
         }
@@ -435,32 +474,18 @@ fun LoginScreen(viewModel: CarbonViewModel) {
 }
 
 @Composable
-fun LoginTypeCard(
+fun GlassLoginTypeCard(
     icon: ImageVector,
     title: String,
     description: String,
-    color: Color,
+    accentColor: Color,
     onClick: () -> Unit
 ) {
-    var pressed by remember { mutableStateOf(false) }
-    val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.95f else 1f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
-        label = "scale"
-    )
-    
-    Card(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .scale(scale)
-            .clickable {
-                onClick()
-            },
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color.White.copy(alpha = 0.95f)
-        ),
-        elevation = CardDefaults.cardElevation(8.dp)
+            .glassEffect()
+            .clickable(onClick = onClick)
     ) {
         Row(
             modifier = Modifier
@@ -471,13 +496,13 @@ fun LoginTypeCard(
             Box(
                 modifier = Modifier
                     .size(60.dp)
-                    .background(color.copy(alpha = 0.1f), CircleShape),
+                    .background(accentColor.copy(alpha = 0.2f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     icon,
                     contentDescription = null,
-                    tint = color,
+                    tint = accentColor,
                     modifier = Modifier.size(32.dp)
                 )
             }
@@ -489,21 +514,307 @@ fun LoginTypeCard(
                     title,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
-                    color = color
+                    color = accentColor
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
                     description,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color.Gray
+                    color = TextSecondary
                 )
             }
             
             Icon(
                 Icons.AutoMirrored.Filled.ArrowForward,
                 contentDescription = null,
-                tint = color
+                tint = accentColor
             )
+        }
+    }
+}
+
+@Composable
+fun BlueCarbonMonitorHomepage(onNewProfileClick: () -> Unit) {
+    var selectedSite by remember { mutableStateOf("Mangrove Restoration Site") }
+    var photoPath by remember { mutableStateOf<String?>(null) }
+    var latitude by remember { mutableStateOf("12.971°") }
+    var longitude by remember { mutableStateOf("77.594°") }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        Color(0xFF5B6FCC),
+                        Color(0xFF7B6FCE),
+                        Color(0xFF9B6FD0)
+                    )
+                )
+            )
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            // Top Bar
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        "Blue Carbon Monitor",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+                    Text(
+                        selectedSite,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextSecondary
+                    )
+                }
+
+                Button(
+                    onClick = onNewProfileClick,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.White.copy(alpha = 0.2f)
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.3f))
+                ) {
+                    Icon(Icons.Default.Person, null, tint = TextPrimary)
+                    Spacer(Modifier.width(8.dp))
+                    Text("New Profile data", color = TextPrimary)
+                }
+            }
+
+            // Main Content Area
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Left Sidebar
+                Column(
+                    modifier = Modifier
+                        .width(250.dp)
+                        .fillMaxHeight(),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // Photo Documentation Card
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .glassEffect()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Face,
+                                    contentDescription = null,
+                                    tint = TextSecondary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Text(
+                                    "Photo Documentation",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextPrimary
+                                )
+                            }
+                        }
+                    }
+
+                    // Location Data Card
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .glassEffect()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.LocationOn,
+                                    contentDescription = null,
+                                    tint = Color(0xFFEF4444),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Text(
+                                    "Location Data",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextPrimary
+                                )
+                            }
+
+                            Text(
+                                "Coordinates:",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextSecondary
+                            )
+
+                            Text(
+                                "$latitude E ${longitude.replace(".", "°")}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = TextPrimary,
+                                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                            )
+
+                            Button(
+                                onClick = { /* Update location */ },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = PrimaryBlue
+                                ),
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Icon(Icons.Default.Refresh, null, modifier = Modifier.size(16.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text("Update Location", style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+                    }
+
+                    // Collection Status Card
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .glassEffect()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Call,
+                                    contentDescription = null,
+                                    tint = AccentGreen,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Text(
+                                    "Collection Status",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextPrimary
+                                )
+                            }
+
+                            Text(
+                                "Points collected:",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextSecondary
+                            )
+
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(8.dp)
+                                        .background(AccentGreen, CircleShape)
+                                )
+                                Text(
+                                    "GPS coordinates",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = TextPrimary
+                                )
+                            }
+
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(8.dp)
+                                        .background(AccentGreen, CircleShape)
+                                )
+                                Text(
+                                    "Satellite.xml",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = TextPrimary
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Main Photo Capture Area
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .glassEffect()
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            Icons.Default.Face,
+                            contentDescription = null,
+                            tint = TextSecondary.copy(alpha = 0.5f),
+                            modifier = Modifier.size(80.dp)
+                        )
+                        Spacer(Modifier.height(16.dp))
+                        Text(
+                            "Tap to capture image or photo",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = TextSecondary
+                        )
+                    }
+                }
+            }
+
+            // Bottom Button
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Button(
+                    onClick = { /* Upload to analysis */ },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = AccentGreen
+                    ),
+                    modifier = Modifier.width(280.dp),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(Icons.Default.Send, null)
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        "Upload to Analysis",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
         }
     }
 }
@@ -521,7 +832,6 @@ fun CarbonRegistryApp(viewModel: CarbonViewModel) {
     val authState by viewModel.authState.collectAsState()
     var showLogoutDialog by remember { mutableStateOf(false) }
 
-    // Show snackbar for UI state changes
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(uiState) {
@@ -530,17 +840,16 @@ fun CarbonRegistryApp(viewModel: CarbonViewModel) {
                 snackbarHostState.showSnackbar((uiState as UiState.Success).message)
                 viewModel.clearUiState()
             }
-
             is UiState.Error -> {
                 snackbarHostState.showSnackbar((uiState as UiState.Error).message)
                 viewModel.clearUiState()
             }
-
             else -> {}
         }
     }
 
     Scaffold(
+        containerColor = DarkBackground,
         topBar = {
             TopAppBar(
                 title = {
@@ -548,7 +857,7 @@ fun CarbonRegistryApp(viewModel: CarbonViewModel) {
                         Icon(
                             Icons.Default.Star,
                             contentDescription = null,
-                            tint = Color(0xFF4CAF50),
+                            tint = AccentGreen,
                             modifier = Modifier.size(32.dp)
                         )
                         Spacer(Modifier.width(8.dp))
@@ -556,23 +865,23 @@ fun CarbonRegistryApp(viewModel: CarbonViewModel) {
                             Text(
                                 "Carbon Registry",
                                 style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
                             )
                             authState.username?.let {
                                 Text(
                                     "Welcome, $it",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                    color = TextSecondary
                                 )
                             }
                         }
                     }
                 },
                 actions = {
-                    // User type badge
                     authState.userType?.let { userType ->
                         Surface(
-                            color = if (userType.name == "ADMIN") Color(0xFFFF9800) else Color(0xFF4CAF50),
+                            color = if (userType.name == "ADMIN") AccentOrange else AccentGreen,
                             shape = RoundedCornerShape(8.dp)
                         ) {
                             Text(
@@ -586,11 +895,11 @@ fun CarbonRegistryApp(viewModel: CarbonViewModel) {
                     }
                     Spacer(Modifier.width(8.dp))
                     IconButton(onClick = { showLogoutDialog = true }) {
-                        Icon(Icons.Default.ExitToApp, "Logout")
+                        Icon(Icons.AutoMirrored.Filled.ExitToApp, "Logout", tint = TextPrimary)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = DarkSurface
                 )
             )
         },
@@ -605,43 +914,44 @@ fun CarbonRegistryApp(viewModel: CarbonViewModel) {
                 Screen.Projects -> ProjectsScreen(viewModel)
                 Screen.Credits -> CreditsScreen(viewModel)
                 Screen.Wallet -> WalletScreen(viewModel)
+                Screen.Profile -> ProfileScreen(viewModel)
             }
 
-            // Loading overlay
             if (uiState is UiState.Loading) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.3f)),
+                        .background(Color.Black.copy(alpha = 0.5f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator()
+                    CircularProgressIndicator(color = AccentGreen)
                 }
             }
         }
     }
-    
-    // Logout confirmation dialog
+
     if (showLogoutDialog) {
         AlertDialog(
             onDismissRequest = { showLogoutDialog = false },
-            title = { Text("Logout") },
-            text = { Text("Are you sure you want to logout?") },
+            title = { Text("Logout", color = TextPrimary) },
+            text = { Text("Are you sure you want to logout?", color = TextSecondary) },
             confirmButton = {
                 Button(
                     onClick = {
                         viewModel.logout()
                         showLogoutDialog = false
-                    }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF44336))
                 ) {
                     Text("Logout")
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showLogoutDialog = false }) {
-                    Text("Cancel")
+                    Text("Cancel", color = AccentGreen)
                 }
-            }
+            },
+            containerColor = DarkSurface
         )
     }
 }
@@ -649,7 +959,7 @@ fun CarbonRegistryApp(viewModel: CarbonViewModel) {
 @Composable
 fun BottomNavigationBar(selectedScreen: Screen, onScreenSelected: (Screen) -> Unit) {
     NavigationBar(
-        containerColor = MaterialTheme.colorScheme.surface,
+        containerColor = DarkSurface,
         tonalElevation = 8.dp
     ) {
         Screen.values().forEach { screen ->
@@ -657,7 +967,14 @@ fun BottomNavigationBar(selectedScreen: Screen, onScreenSelected: (Screen) -> Un
                 icon = { Icon(screen.icon, contentDescription = screen.title) },
                 label = { Text(screen.title) },
                 selected = selectedScreen == screen,
-                onClick = { onScreenSelected(screen) }
+                onClick = { onScreenSelected(screen) },
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = AccentGreen,
+                    selectedTextColor = AccentGreen,
+                    unselectedIconColor = TextSecondary,
+                    unselectedTextColor = TextSecondary,
+                    indicatorColor = AccentGreen.copy(alpha = 0.2f)
+                )
             )
         }
     }
@@ -675,46 +992,42 @@ fun DashboardScreen(viewModel: CarbonViewModel) {
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
+            .background(DarkBackground),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Welcome Header
+        // Welcome Header with glass effect
         item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFF4CAF50)
-                ),
-                shape = RoundedCornerShape(16.dp)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .glassEffect()
             ) {
-                Box(modifier = Modifier.fillMaxWidth()) {
-                    Column(
-                        modifier = Modifier.padding(20.dp)
-                    ) {
-                        Text(
-                            "Welcome to Carbon Registry",
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            "Track, trade, and retire carbon credits on blockchain",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White.copy(alpha = 0.9f)
-                        )
-                    }
+                Column(
+                    modifier = Modifier.padding(20.dp)
+                ) {
+                    Text(
+                        "Welcome to Carbon Registry",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "Track, trade, and retire carbon credits on blockchain",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextSecondary
+                    )
                 }
             }
         }
 
-        // Statistics Cards
         item {
             Text(
                 "Global Impact",
                 style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary
             )
         }
 
@@ -723,18 +1036,18 @@ fun DashboardScreen(viewModel: CarbonViewModel) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                StatCard(
+                GlassStatCard(
                     title = "CO₂ Offset",
                     value = formatNumber(totalCo2) + " t",
                     icon = Icons.Default.Check,
-                    color = Color(0xFF2196F3),
+                    color = PrimaryBlue,
                     modifier = Modifier.weight(1f)
                 )
-                StatCard(
+                GlassStatCard(
                     title = "Active Projects",
                     value = activeProjects.toString(),
                     icon = Icons.Default.Star,
-                    color = Color(0xFF4CAF50),
+                    color = AccentGreen,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -745,29 +1058,29 @@ fun DashboardScreen(viewModel: CarbonViewModel) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                StatCard(
+                GlassStatCard(
                     title = "Available Credits",
                     value = availableCredits.toString(),
                     icon = Icons.Default.Info,
-                    color = Color(0xFFFF9800),
+                    color = AccentOrange,
                     modifier = Modifier.weight(1f)
                 )
-                StatCard(
+                GlassStatCard(
                     title = "Your Credits",
                     value = formatNumber(wallet?.totalCreditsOwned ?: 0.0),
                     icon = Icons.Default.Edit,
-                    color = Color(0xFF9C27B0),
+                    color = PrimaryPurple,
                     modifier = Modifier.weight(1f)
                 )
             }
         }
 
-        // Featured Projects
         item {
             Text(
                 "Featured Projects",
                 style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary
             )
         }
 
@@ -784,12 +1097,12 @@ fun DashboardScreen(viewModel: CarbonViewModel) {
             }
         }
 
-        // Recent Credits
         item {
             Text(
                 "Recent Credits",
                 style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary
             )
         }
 
@@ -1089,19 +1402,15 @@ fun WalletScreen(viewModel: CarbonViewModel) {
 }
 
 @Composable
-fun StatCard(
+fun GlassStatCard(
     title: String,
     value: String,
     icon: ImageVector,
     color: Color,
     modifier: Modifier = Modifier
 ) {
-    Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = color.copy(alpha = 0.1f)
-        )
+    Box(
+        modifier = modifier.glassEffect()
     ) {
         Column(
             modifier = Modifier
@@ -1124,7 +1433,7 @@ fun StatCard(
             Text(
                 title,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                color = TextSecondary
             )
         }
     }
@@ -1619,6 +1928,145 @@ fun EmptyState(icon: ImageVector, message: String) {
     }
 }
 
+@Composable
+fun ProfileScreen(viewModel: CarbonViewModel) {
+    val authState by viewModel.authState.collectAsState()
+    val wallet by viewModel.userWallet.collectAsState()
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(DarkBackground)
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Top
+    ) {
+        Spacer(Modifier.height(32.dp))
+        // Avatar with glass effect
+        Box(
+            modifier = Modifier
+                .size(90.dp)
+                .glassEffect()
+                .background(AccentGreen.copy(alpha = 0.2f), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                Icons.Default.Person,
+                contentDescription = null,
+                tint = AccentGreen,
+                modifier = Modifier.size(56.dp)
+            )
+        }
+        Spacer(Modifier.height(16.dp))
+        // Username
+        Text(
+            authState.username.orEmpty(),
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = TextPrimary
+        )
+        Surface(
+            color = if (authState.userType?.name == "ADMIN") AccentOrange else AccentGreen,
+            shape = RoundedCornerShape(8.dp)
+        ) {
+            Text(
+                authState.userType?.name.orEmpty(),
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                style = MaterialTheme.typography.labelSmall,
+                color = Color.White,
+                fontWeight = FontWeight.Bold
+            )
+        }
+        Spacer(Modifier.height(16.dp))
+        // Email
+        if (!authState.email.isNullOrEmpty()) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Email, contentDescription = null, tint = TextSecondary)
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    authState.email.orEmpty(),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextSecondary
+                )
+            }
+            Spacer(Modifier.height(16.dp))
+        }
+        // Wallet with glass effect
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .glassEffect()
+        ) {
+            Column(modifier = Modifier.padding(18.dp)) {
+                Text(
+                    "Wallet Address",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = TextSecondary
+                )
+                Text(
+                    wallet?.address?.take(40)?.plus("...") ?: "No wallet created",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextPrimary,
+                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(Modifier.height(8.dp))
+                Row(
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column {
+                        Text(
+                            "Owned",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = TextSecondary
+                        )
+                        Text(
+                            formatNumber(wallet?.totalCreditsOwned ?: 0.0) + " tCO₂",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = AccentGreen
+                        )
+                    }
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            "Retired",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = TextSecondary
+                        )
+                        Text(
+                            formatNumber(wallet?.totalCreditsRetired ?: 0.0) + " tCO₂",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = PrimaryPurple
+                        )
+                    }
+                }
+            }
+        }
+        Spacer(Modifier.height(36.dp))
+        // Logout Button
+        Button(
+            onClick = { viewModel.logout() },
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF44336)),
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Icon(Icons.AutoMirrored.Filled.ExitToApp, null)
+            Spacer(Modifier.width(8.dp))
+            Text("Logout")
+        }
+        Spacer(Modifier.height(20.dp))
+        Text(
+            "Profile and account settings coming soon!",
+            style = MaterialTheme.typography.bodySmall,
+            color = TextSecondary,
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
 // Helper Functions
 fun getProjectTypeColor(type: ProjectType): Color = when (type) {
     ProjectType.REFORESTATION -> Color(0xFF4CAF50)
@@ -1670,5 +2118,6 @@ enum class Screen(val title: String, val icon: ImageVector) {
     Dashboard("Dashboard", Icons.Default.Home),
     Projects("Projects", Icons.Default.Star),
     Credits("Credits", Icons.Default.Info),
-    Wallet("Wallet", Icons.Default.Settings)
+    Wallet("Wallet", Icons.Default.Settings),
+    Profile("Profile", Icons.Default.Person)
 }
