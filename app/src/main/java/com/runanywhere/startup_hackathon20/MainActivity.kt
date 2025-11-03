@@ -58,16 +58,18 @@ import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.*
 
-// Dark Theme Colors
-val DarkBackground = Color(0xFF0A0E27)
-val DarkSurface = Color(0xFF151932)
-val PrimaryPurple = Color(0xFF6366F1)
-val PrimaryBlue = Color(0xFF3B82F6)
-val AccentGreen = Color(0xFF10B981)
-val AccentOrange = Color(0xFFF59E0B)
+// Dark Theme Colors - Green-Blue Gradient Theme
+val DarkBackground = Color(0xFF0A1E27)
+val DarkSurface = Color(0xFF0F2830)
+val PrimaryGreen = Color(0xFF10B981)
+val PrimaryTeal = Color(0xFF14B8A6)
+val PrimaryBlue = Color(0xFF06B6D4)
+val SecondaryGreen = Color(0xFF059669)
+val AccentCyan = Color(0xFF22D3EE)
+val AccentEmerald = Color(0xFF34D399)
 val GlassWhite = Color(0xFFFFFFFF)
 val TextPrimary = Color(0xFFFFFFFF)
-val TextSecondary = Color(0xFFB4B4C8)
+val TextSecondary = Color(0xFFB4C6CC)
 
 class MainActivity : ComponentActivity() {
     private val viewModel: CarbonViewModel by viewModels()
@@ -177,7 +179,7 @@ fun LoginScreen(
                 modifier = Modifier
                     .size(400.dp)
                     .offset(x = (-100).dp, y = (-150).dp)
-                    .background(PrimaryPurple.copy(alpha = 0.3f), CircleShape)
+                    .background(PrimaryTeal.copy(alpha = 0.3f), CircleShape)
                     .blur(100.dp)
             )
             Box(
@@ -193,7 +195,7 @@ fun LoginScreen(
                     .size(300.dp)
                     .align(Alignment.BottomStart)
                     .offset(x = (-50).dp, y = 100.dp)
-                    .background(AccentGreen.copy(alpha = 0.2f), CircleShape)
+                    .background(PrimaryGreen.copy(alpha = 0.2f), CircleShape)
                     .blur(100.dp)
             )
             
@@ -272,7 +274,7 @@ fun LoginScreen(
                                     icon = Icons.Default.Person,
                                     title = "User Login",
                                     description = "Access carbon credits and manage your portfolio",
-                                    accentColor = AccentGreen,
+                                    accentColor = PrimaryGreen,
                                     onClick = { selectedLoginType = LoginType.USER }
                                 )
                                 
@@ -280,7 +282,7 @@ fun LoginScreen(
                                     icon = Icons.Default.Settings,
                                     title = "Admin Login",
                                     description = "Manage projects, verify credits, and oversee operations",
-                                    accentColor = AccentOrange,
+                                    accentColor = AccentCyan,
                                     onClick = { selectedLoginType = LoginType.ADMIN }
                                 )
                             }
@@ -321,7 +323,7 @@ fun LoginScreen(
                                         Icon(
                                             if (loginType == LoginType.ADMIN) Icons.Default.Settings else Icons.Default.Person,
                                             contentDescription = null,
-                                            tint = if (loginType == LoginType.ADMIN) AccentOrange else AccentGreen,
+                                            tint = if (loginType == LoginType.ADMIN) AccentCyan else PrimaryGreen,
                                             modifier = Modifier.size(32.dp)
                                         )
                                     }
@@ -349,7 +351,7 @@ fun LoginScreen(
                                         colors = OutlinedTextFieldDefaults.colors(
                                             focusedTextColor = TextPrimary,
                                             unfocusedTextColor = TextPrimary,
-                                            focusedBorderColor = PrimaryPurple,
+                                            focusedBorderColor = PrimaryTeal,
                                             unfocusedBorderColor = Color.White.copy(alpha = 0.3f)
                                         )
                                     )
@@ -368,7 +370,7 @@ fun LoginScreen(
                                             colors = OutlinedTextFieldDefaults.colors(
                                                 focusedTextColor = TextPrimary,
                                                 unfocusedTextColor = TextPrimary,
-                                                focusedBorderColor = PrimaryPurple,
+                                                focusedBorderColor = PrimaryTeal,
                                                 unfocusedBorderColor = Color.White.copy(alpha = 0.3f)
                                             )
                                         )
@@ -398,7 +400,7 @@ fun LoginScreen(
                                         colors = OutlinedTextFieldDefaults.colors(
                                             focusedTextColor = TextPrimary,
                                             unfocusedTextColor = TextPrimary,
-                                            focusedBorderColor = PrimaryPurple,
+                                            focusedBorderColor = PrimaryTeal,
                                             unfocusedBorderColor = Color.White.copy(alpha = 0.3f)
                                         )
                                     )
@@ -418,7 +420,7 @@ fun LoginScreen(
                                             .fillMaxWidth()
                                             .height(56.dp),
                                         colors = ButtonDefaults.buttonColors(
-                                            containerColor = if (loginType == LoginType.ADMIN) AccentOrange else AccentGreen
+                                            containerColor = if (loginType == LoginType.ADMIN) AccentCyan else PrimaryGreen
                                         ),
                                         shape = RoundedCornerShape(12.dp),
                                         enabled = username.isNotBlank() && password.isNotBlank() && 
@@ -457,7 +459,7 @@ fun LoginScreen(
                                         ) {
                                             Text(
                                                 if (isRegistering) "Already have an account? Login" else "Don't have an account? Register",
-                                                color = AccentGreen
+                                                color = PrimaryGreen
                                             )
                                         }
                                     }
@@ -560,6 +562,9 @@ fun BlueCarbonMonitorHomepage(onNewProfileClick: () -> Unit) {
     var isUploading by remember { mutableStateOf(false) }
     var showPhotoPreview by remember { mutableStateOf(false) }
 
+    // For gallery picker
+    var galleryPhotoUri by remember { mutableStateOf<Uri?>(null) }
+
     // Create photo file (using remember for stable file across recompositions)
     val photoFile = remember {
         val ts = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
@@ -600,6 +605,17 @@ fun BlueCarbonMonitorHomepage(onNewProfileClick: () -> Unit) {
         }
     }
 
+    // Gallery picker launcher
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { selectedUri: Uri? ->
+        if (selectedUri != null) {
+            photoUri = selectedUri
+            showPhotoPreview = true
+            Toast.makeText(context, "Photo selected from gallery!", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     // Location permission launcher  
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
@@ -632,6 +648,11 @@ fun BlueCarbonMonitorHomepage(onNewProfileClick: () -> Unit) {
         }
     }
 
+    // Gallery pick function
+    fun pickFromGallery() {
+        galleryLauncher.launch("image/*")
+    }
+
     // Location update function
     fun updateLocation() {
         isGettingLocation = true
@@ -656,7 +677,8 @@ fun BlueCarbonMonitorHomepage(onNewProfileClick: () -> Unit) {
     // Upload simulation
     fun uploadToAnalysis() {
         if (photoUri == null) {
-            Toast.makeText(context, "Please capture a photo first", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Please capture or select a photo first", Toast.LENGTH_SHORT)
+                .show()
             return
         }
         isUploading = true
@@ -673,9 +695,9 @@ fun BlueCarbonMonitorHomepage(onNewProfileClick: () -> Unit) {
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
-                        Color(0xFF5B6FCC),
-                        Color(0xFF7B6FCE),
-                        Color(0xFF9B6FD0)
+                        PrimaryGreen,
+                        PrimaryTeal,
+                        PrimaryBlue
                     )
                 )
             )
@@ -688,7 +710,7 @@ fun BlueCarbonMonitorHomepage(onNewProfileClick: () -> Unit) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.Start,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
@@ -704,16 +726,24 @@ fun BlueCarbonMonitorHomepage(onNewProfileClick: () -> Unit) {
                         color = TextSecondary
                     )
                 }
+            }
 
+            // New Profile Button repositioned here
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                contentAlignment = Alignment.CenterStart
+            ) {
                 Button(
                     onClick = onNewProfileClick,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.White.copy(alpha = 0.2f)
+                        containerColor = AccentEmerald.copy(alpha = 0.25f)
                     ),
                     shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.3f))
+                    border = BorderStroke(1.dp, GlassWhite.copy(alpha = 0.12f))
                 ) {
-                    Icon(Icons.Default.Person, null, tint = TextPrimary)
+                    Icon(Icons.Default.Person, null, tint = PrimaryGreen)
                     Spacer(Modifier.width(8.dp))
                     Text("New Profile data", color = TextPrimary)
                 }
@@ -773,22 +803,61 @@ fun BlueCarbonMonitorHomepage(onNewProfileClick: () -> Unit) {
                                     contentScale = ContentScale.Crop
                                 )
                                 Spacer(Modifier.height(8.dp))
-                                Button(
-                                    onClick = {
-                                        showPhotoPreview = false
-                                        photoUri = null
-                                    },
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = Color(0xFFF44336)
-                                    ),
-                                    modifier = Modifier.fillMaxWidth(),
-                                    shape = RoundedCornerShape(8.dp)
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    modifier = Modifier.fillMaxWidth()
                                 ) {
-                                    Icon(Icons.Default.Delete, null, modifier = Modifier.size(16.dp))
-                                    Spacer(Modifier.width(4.dp))
-                                    Text("Remove", style = MaterialTheme.typography.bodySmall)
+                                    Button(
+                                        onClick = {
+                                            showPhotoPreview = false
+                                            photoUri = null
+                                        },
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = Color(0xFFF44336)
+                                        ),
+                                        modifier = Modifier.weight(1f),
+                                        shape = RoundedCornerShape(8.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Delete,
+                                            null,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(Modifier.width(4.dp))
+                                        Text("Remove", style = MaterialTheme.typography.bodySmall)
+                                    }
                                 }
                             } else {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Button(
+                                        onClick = { capturePhoto() },
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = PrimaryGreen.copy(alpha = 0.93f)
+                                        ),
+                                        shape = RoundedCornerShape(8.dp),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Icon(Icons.Default.CameraAlt, null)
+                                        Spacer(Modifier.width(4.dp))
+                                        Text("Capture photo")
+                                    }
+                                    Button(
+                                        onClick = { pickFromGallery() },
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = PrimaryBlue.copy(alpha = 0.93f)
+                                        ),
+                                        shape = RoundedCornerShape(8.dp),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Icon(Icons.Default.Photo, null)
+                                        Spacer(Modifier.width(4.dp))
+                                        Text("Upload from Gallery")
+                                    }
+                                }
+                                Spacer(Modifier.height(8.dp))
                                 Text(
                                     "No photo captured yet.",
                                     style = MaterialTheme.typography.bodySmall,
@@ -890,7 +959,7 @@ fun BlueCarbonMonitorHomepage(onNewProfileClick: () -> Unit) {
                                 Icon(
                                     Icons.Default.Call,
                                     contentDescription = null,
-                                    tint = AccentGreen,
+                                    tint = PrimaryGreen,
                                     modifier = Modifier.size(20.dp)
                                 )
                                 Text(
@@ -915,7 +984,7 @@ fun BlueCarbonMonitorHomepage(onNewProfileClick: () -> Unit) {
                                     modifier = Modifier
                                         .size(8.dp)
                                         .background(
-                                            if (latitude != null && longitude != null) AccentGreen else Color.Gray,
+                                            if (latitude != null && longitude != null) PrimaryGreen else Color.Gray,
                                             CircleShape
                                         )
                                 )
@@ -934,7 +1003,7 @@ fun BlueCarbonMonitorHomepage(onNewProfileClick: () -> Unit) {
                                     modifier = Modifier
                                         .size(8.dp)
                                         .background(
-                                            if (photoUri != null) AccentGreen else Color.Gray,
+                                            if (photoUri != null) PrimaryGreen else Color.Gray,
                                             CircleShape
                                         )
                                 )
@@ -954,7 +1023,6 @@ fun BlueCarbonMonitorHomepage(onNewProfileClick: () -> Unit) {
                         .weight(1f)
                         .fillMaxHeight()
                         .glassEffect()
-                        .clickable { capturePhoto() }
                 ) {
                     Column(
                         modifier = Modifier
@@ -977,7 +1045,7 @@ fun BlueCarbonMonitorHomepage(onNewProfileClick: () -> Unit) {
                             Text(
                                 "Photo ready for upload",
                                 style = MaterialTheme.typography.bodyLarge,
-                                color = AccentGreen,
+                                color = PrimaryGreen,
                                 fontWeight = FontWeight.Bold
                             )
                         } else {
@@ -989,9 +1057,10 @@ fun BlueCarbonMonitorHomepage(onNewProfileClick: () -> Unit) {
                             )
                             Spacer(Modifier.height(16.dp))
                             Text(
-                                "Tap to capture image or photo",
+                                "Capture or upload image using the buttons",
                                 style = MaterialTheme.typography.bodyLarge,
-                                color = TextSecondary
+                                color = TextSecondary,
+                                textAlign = TextAlign.Center
                             )
                         }
                     }
@@ -1008,7 +1077,7 @@ fun BlueCarbonMonitorHomepage(onNewProfileClick: () -> Unit) {
                 Button(
                     onClick = { uploadToAnalysis() },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = AccentGreen
+                        containerColor = AccentEmerald
                     ),
                     modifier = Modifier.width(280.dp),
                     shape = RoundedCornerShape(12.dp),
@@ -1103,7 +1172,7 @@ fun CarbonRegistryApp(viewModel: CarbonViewModel) {
                         Icon(
                             Icons.Default.Star,
                             contentDescription = null,
-                            tint = AccentGreen,
+                            tint = PrimaryGreen,
                             modifier = Modifier.size(32.dp)
                         )
                         Spacer(Modifier.width(8.dp))
@@ -1127,7 +1196,7 @@ fun CarbonRegistryApp(viewModel: CarbonViewModel) {
                 actions = {
                     authState.userType?.let { userType ->
                         Surface(
-                            color = if (userType.name == "ADMIN") AccentOrange else AccentGreen,
+                            color = if (userType.name == "ADMIN") AccentCyan else PrimaryGreen,
                             shape = RoundedCornerShape(8.dp)
                         ) {
                             Text(
@@ -1170,7 +1239,7 @@ fun CarbonRegistryApp(viewModel: CarbonViewModel) {
                         .background(Color.Black.copy(alpha = 0.5f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator(color = AccentGreen)
+                    CircularProgressIndicator(color = PrimaryGreen)
                 }
             }
         }
@@ -1194,7 +1263,7 @@ fun CarbonRegistryApp(viewModel: CarbonViewModel) {
             },
             dismissButton = {
                 TextButton(onClick = { showLogoutDialog = false }) {
-                    Text("Cancel", color = AccentGreen)
+                    Text("Cancel", color = PrimaryGreen)
                 }
             },
             containerColor = DarkSurface
@@ -1215,11 +1284,11 @@ fun BottomNavigationBar(selectedScreen: Screen, onScreenSelected: (Screen) -> Un
                 selected = selectedScreen == screen,
                 onClick = { onScreenSelected(screen) },
                 colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = AccentGreen,
-                    selectedTextColor = AccentGreen,
+                    selectedIconColor = PrimaryGreen,
+                    selectedTextColor = PrimaryGreen,
                     unselectedIconColor = TextSecondary,
                     unselectedTextColor = TextSecondary,
-                    indicatorColor = AccentGreen.copy(alpha = 0.2f)
+                    indicatorColor = PrimaryGreen.copy(alpha = 0.2f)
                 )
             )
         }
@@ -1293,7 +1362,7 @@ fun DashboardScreen(viewModel: CarbonViewModel) {
                     title = "Active Projects",
                     value = activeProjects.toString(),
                     icon = Icons.Default.Star,
-                    color = AccentGreen,
+                    color = PrimaryGreen,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -1308,14 +1377,14 @@ fun DashboardScreen(viewModel: CarbonViewModel) {
                     title = "Available Credits",
                     value = availableCredits.toString(),
                     icon = Icons.Default.Info,
-                    color = AccentOrange,
+                    color = AccentCyan,
                     modifier = Modifier.weight(1f)
                 )
                 GlassStatCard(
                     title = "Your Credits",
                     value = formatNumber(wallet?.totalCreditsOwned ?: 0.0),
                     icon = Icons.Default.Edit,
-                    color = PrimaryPurple,
+                    color = PrimaryTeal,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -2193,13 +2262,13 @@ fun ProfileScreen(viewModel: CarbonViewModel) {
             modifier = Modifier
                 .size(90.dp)
                 .glassEffect()
-                .background(AccentGreen.copy(alpha = 0.2f), CircleShape),
+                .background(PrimaryGreen.copy(alpha = 0.2f), CircleShape),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 Icons.Default.Person,
                 contentDescription = null,
-                tint = AccentGreen,
+                tint = PrimaryGreen,
                 modifier = Modifier.size(56.dp)
             )
         }
@@ -2212,7 +2281,7 @@ fun ProfileScreen(viewModel: CarbonViewModel) {
             color = TextPrimary
         )
         Surface(
-            color = if (authState.userType?.name == "ADMIN") AccentOrange else AccentGreen,
+            color = if (authState.userType?.name == "ADMIN") AccentCyan else PrimaryGreen,
             shape = RoundedCornerShape(8.dp)
         ) {
             Text(
@@ -2272,7 +2341,7 @@ fun ProfileScreen(viewModel: CarbonViewModel) {
                             formatNumber(wallet?.totalCreditsOwned ?: 0.0) + " tCO₂",
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold,
-                            color = AccentGreen
+                            color = PrimaryGreen
                         )
                     }
                     Column(horizontalAlignment = Alignment.End) {
@@ -2285,7 +2354,7 @@ fun ProfileScreen(viewModel: CarbonViewModel) {
                             formatNumber(wallet?.totalCreditsRetired ?: 0.0) + " tCO₂",
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold,
-                            color = PrimaryPurple
+                            color = PrimaryTeal
                         )
                     }
                 }
@@ -2315,13 +2384,13 @@ fun ProfileScreen(viewModel: CarbonViewModel) {
 
 // Helper Functions
 fun getProjectTypeColor(type: ProjectType): Color = when (type) {
-    ProjectType.REFORESTATION -> Color(0xFF4CAF50)
-    ProjectType.RENEWABLE_ENERGY -> Color(0xFFFFEB3B)
-    ProjectType.ENERGY_EFFICIENCY -> Color(0xFF03A9F4)
-    ProjectType.METHANE_CAPTURE -> Color(0xFFFF5722)
-    ProjectType.OCEAN_CONSERVATION -> Color(0xFF2196F3)
-    ProjectType.CARBON_CAPTURE -> Color(0xFF9C27B0)
-    ProjectType.SUSTAINABLE_AGRICULTURE -> Color(0xFF8BC34A)
+    ProjectType.REFORESTATION -> PrimaryGreen
+    ProjectType.RENEWABLE_ENERGY -> AccentEmerald
+    ProjectType.ENERGY_EFFICIENCY -> PrimaryTeal
+    ProjectType.METHANE_CAPTURE -> AccentCyan
+    ProjectType.OCEAN_CONSERVATION -> PrimaryBlue
+    ProjectType.CARBON_CAPTURE -> SecondaryGreen
+    ProjectType.SUSTAINABLE_AGRICULTURE -> PrimaryGreen
 }
 
 fun getProjectTypeIcon(type: ProjectType): ImageVector = when (type) {
