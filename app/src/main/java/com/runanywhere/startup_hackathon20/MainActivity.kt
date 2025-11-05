@@ -566,6 +566,10 @@ fun BlueCarbonMonitorHomepage(
     // For gallery picker
     var galleryPhotoUri by remember { mutableStateOf<Uri?>(null) }
 
+    // For carbon credits profile section
+    val wallet by viewModel.userWallet.collectAsState()
+    val authState by viewModel.authState.collectAsState()
+
     // Create photo file (using remember for stable file across recompositions)
     val photoFile = remember {
         val ts = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
@@ -752,8 +756,6 @@ fun BlueCarbonMonitorHomepage(
                     }
                 }
             }
-
-            // Profile Button - Centered (hidden with new flow)
 
             // Main Content Area - Centered
             Box(
@@ -1072,6 +1074,104 @@ fun BlueCarbonMonitorHomepage(
                             }
                         }
                     }
+
+                    // User Profile Section: Carbon Credits
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .glassEffect()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Person,
+                                    contentDescription = null,
+                                    tint = PrimaryGreen,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Text(
+                                    "Profile",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextPrimary
+                                )
+                            }
+
+                            // Username
+                            Text(
+                                authState.username.orEmpty(),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
+                            // Email
+                            if (!authState.email.isNullOrEmpty()) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(Icons.Default.Email, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(16.dp))
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(
+                                        authState.email.orEmpty(),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = TextSecondary
+                                    )
+                                }
+                            }
+                            Spacer(Modifier.height(4.dp))
+                            // Credits Info
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column {
+                                    Text(
+                                        "Owned",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = TextSecondary
+                                    )
+                                    Text(
+                                        formatNumber(wallet?.totalCreditsOwned ?: 0.0) + " tCO₂",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = PrimaryGreen
+                                    )
+                                }
+                                Column(horizontalAlignment = Alignment.End) {
+                                    Text(
+                                        "Retired",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = TextSecondary
+                                    )
+                                    Text(
+                                        formatNumber(wallet?.totalCreditsRetired ?: 0.0) + " tCO₂",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = PrimaryTeal
+                                    )
+                                }
+                            }
+                            Spacer(Modifier.height(4.dp))
+                            // Wallet Address
+                            Text(
+                                "Wallet: " + (wallet?.address?.take(20) ?: "Not created") + "...",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = TextSecondary,
+                                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -1110,9 +1210,13 @@ enum class LoginType {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CarbonRegistryApp(viewModel: CarbonViewModel) {
-    var selectedScreen by remember { mutableStateOf(Screen.Dashboard) }
-    val uiState by viewModel.uiState.collectAsState()
     val authState by viewModel.authState.collectAsState()
+    var selectedScreen by remember {
+        mutableStateOf(
+            if (authState.userType == CarbonViewModel.UserType.ADMIN) Screen.Profile else Screen.Dashboard
+        )
+    }
+    val uiState by viewModel.uiState.collectAsState()
     var showLogoutDialog by remember { mutableStateOf(false) }
 
     val snackbarHostState = remember { SnackbarHostState() }
@@ -1254,10 +1358,6 @@ fun BottomNavigationBar(
     val screens = remember(isAdmin) {
         if (isAdmin) {
             listOf(
-                Screen.Dashboard,
-                Screen.Projects,
-                Screen.Credits,
-                Screen.Wallet,
                 Screen.Profile,
                 Screen.AdminVerification
             )
