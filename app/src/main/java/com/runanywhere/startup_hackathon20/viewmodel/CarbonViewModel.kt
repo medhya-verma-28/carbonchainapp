@@ -22,6 +22,7 @@ class CarbonViewModel : ViewModel() {
     val credits = repository.credits
     val transactions = repository.transactions
     val userWallet = repository.userWallet
+    val userSubmissions = repository.userSubmissions
 
     // UI State
     private val _uiState = MutableStateFlow<UiState>(UiState.Idle)
@@ -217,6 +218,37 @@ class CarbonViewModel : ViewModel() {
                 _uiState.value =
                     UiState.Error("Invalid registration details. Please check and try again.")
             }
+        }
+    }
+
+    fun approveSubmission(submissionId: String, notes: String) {
+        viewModelScope.launch {
+            _uiState.value = UiState.Loading
+            val result = repository.approveSubmission(submissionId, notes)
+            result.fold(
+                onSuccess = {
+                    _uiState.value =
+                        UiState.Success("Submission approved and uploaded to blockchain!")
+                },
+                onFailure = { error ->
+                    _uiState.value = UiState.Error(error.message ?: "Approval failed")
+                }
+            )
+        }
+    }
+
+    fun rejectSubmission(submissionId: String, notes: String) {
+        viewModelScope.launch {
+            _uiState.value = UiState.Loading
+            val result = repository.rejectSubmission(submissionId, notes)
+            result.fold(
+                onSuccess = {
+                    _uiState.value = UiState.Success("Submission rejected")
+                },
+                onFailure = { error ->
+                    _uiState.value = UiState.Error(error.message ?: "Rejection failed")
+                }
+            )
         }
     }
 }

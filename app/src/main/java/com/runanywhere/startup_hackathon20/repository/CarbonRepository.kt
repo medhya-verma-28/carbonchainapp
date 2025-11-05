@@ -26,6 +26,9 @@ class CarbonRepository(
     private val _userWallet = MutableStateFlow<UserWallet?>(null)
     val userWallet: StateFlow<UserWallet?> = _userWallet.asStateFlow()
 
+    private val _userSubmissions = MutableStateFlow<List<UserSubmission>>(emptyList())
+    val userSubmissions: StateFlow<List<UserSubmission>> = _userSubmissions.asStateFlow()
+
     init {
         loadMockData()
     }
@@ -251,6 +254,70 @@ class CarbonRepository(
                 imageUrl = null
             )
         )
+
+        // Mock User Submissions
+        _userSubmissions.value = listOf(
+            UserSubmission(
+                id = "MANS-3821",
+                submissionDate = currentTime - 10 * 24 * 60 * 60 * 1000,
+                location = "New Delhi, India",
+                dataQuality = "High",
+                status = SubmissionStatus.PENDING,
+                co2Value = 2.3,
+                hectaresValue = 1.2,
+                vegetationCoverage = 74.0,
+                aiConfidence = 84.0,
+                imageUrl = "https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?w=800",
+                coordinates = Coordinates(28.6139, 77.2090),
+                gpsVerified = true,
+                satelliteDataVerified = true,
+                imageQualityVerified = true,
+                coordinatesWithinRange = true,
+                submitterName = "John Doe",
+                submitterEmail = "john.doe@example.com",
+                notes = "Sample submission for verification"
+            ),
+            UserSubmission(
+                id = "MANS-3822",
+                submissionDate = currentTime - 5 * 24 * 60 * 60 * 1000,
+                location = "Mumbai, India",
+                dataQuality = "Medium",
+                status = SubmissionStatus.PENDING,
+                co2Value = 1.8,
+                hectaresValue = 0.9,
+                vegetationCoverage = 65.0,
+                aiConfidence = 78.0,
+                imageUrl = "https://images.unsplash.com/photo-1511497584788-876760111969?w=800",
+                coordinates = Coordinates(19.0760, 72.8777),
+                gpsVerified = true,
+                satelliteDataVerified = false,
+                imageQualityVerified = true,
+                coordinatesWithinRange = true,
+                submitterName = "Jane Smith",
+                submitterEmail = "jane.smith@example.com",
+                notes = ""
+            ),
+            UserSubmission(
+                id = "MANS-3820",
+                submissionDate = currentTime - 15 * 24 * 60 * 60 * 1000,
+                location = "Bangalore, India",
+                dataQuality = "High",
+                status = SubmissionStatus.APPROVED,
+                co2Value = 3.1,
+                hectaresValue = 1.5,
+                vegetationCoverage = 82.0,
+                aiConfidence = 91.0,
+                imageUrl = "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800",
+                coordinates = Coordinates(12.9716, 77.5946),
+                gpsVerified = true,
+                satelliteDataVerified = true,
+                imageQualityVerified = true,
+                coordinatesWithinRange = true,
+                submitterName = "Alice Johnson",
+                submitterEmail = "alice.j@example.com",
+                notes = "Approved and uploaded to blockchain"
+            )
+        )
     }
 
     suspend fun createWallet(): UserWallet {
@@ -331,5 +398,39 @@ class CarbonRepository(
 
     fun getTransactionsByCreditId(creditId: String): List<Transaction> {
         return _transactions.value.filter { it.creditId == creditId }
+    }
+
+    suspend fun approveSubmission(submissionId: String, notes: String): Result<Unit> {
+        return try {
+            delay(1000) // Simulate blockchain upload
+            val updatedSubmissions = _userSubmissions.value.map { submission ->
+                if (submission.id == submissionId) {
+                    submission.copy(status = SubmissionStatus.APPROVED, notes = notes)
+                } else {
+                    submission
+                }
+            }
+            _userSubmissions.value = updatedSubmissions
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun rejectSubmission(submissionId: String, notes: String): Result<Unit> {
+        return try {
+            delay(500)
+            val updatedSubmissions = _userSubmissions.value.map { submission ->
+                if (submission.id == submissionId) {
+                    submission.copy(status = SubmissionStatus.REJECTED, notes = notes)
+                } else {
+                    submission
+                }
+            }
+            _userSubmissions.value = updatedSubmissions
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 }

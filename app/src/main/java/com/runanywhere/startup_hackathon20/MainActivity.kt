@@ -51,6 +51,7 @@ import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
 import com.runanywhere.startup_hackathon20.data.*
 import com.runanywhere.startup_hackathon20.ui.theme.Startup_hackathon20Theme
+import com.runanywhere.startup_hackathon20.ui.AdminVerificationScreen
 import com.runanywhere.startup_hackathon20.viewmodel.CarbonViewModel
 import com.runanywhere.startup_hackathon20.viewmodel.UiState
 import java.io.File
@@ -99,30 +100,26 @@ fun Modifier.glassEffect() = this
 @Composable
 fun MainApp(viewModel: CarbonViewModel) {
     val authState by viewModel.authState.collectAsState()
-    var showLoginScreen by remember { mutableStateOf(false) }
     
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = DarkBackground
     ) {
         when {
-            !authState.isAuthenticated && !showLoginScreen -> {
-                // Show Blue Carbon Monitor Homepage first
+            !authState.isAuthenticated -> {
+                // Show Login Screen first
+                LoginScreen(viewModel = viewModel)
+            }
+
+            authState.userType == CarbonViewModel.UserType.USER -> {
+                // User sees Blue Carbon Monitor homepage
                 BlueCarbonMonitorHomepage(
-                    onNewProfileClick = { showLoginScreen = true }
+                    viewModel = viewModel
                 )
             }
 
-            !authState.isAuthenticated && showLoginScreen -> {
-                // Show Login Screen
-                LoginScreen(
-                    viewModel = viewModel,
-                    onBack = { showLoginScreen = false }
-                )
-            }
-
-            else -> {
-                // Show Main App based on user role
+            authState.userType == CarbonViewModel.UserType.ADMIN -> {
+                // Admin sees full Carbon Registry App with verification portal
                 CarbonRegistryApp(viewModel)
             }
         }
@@ -133,7 +130,7 @@ fun MainApp(viewModel: CarbonViewModel) {
 @Composable
 fun LoginScreen(
     viewModel: CarbonViewModel,
-    onBack: () -> Unit
+    onBack: (() -> Unit)? = null
 ) {
     var selectedLoginType by remember { mutableStateOf<LoginType?>(null) }
     var username by remember { mutableStateOf("") }
@@ -208,16 +205,18 @@ fun LoginScreen(
                 verticalArrangement = Arrangement.Center
             ) {
                 // Top Bar Back Button
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Start
-                ) {
-                    IconButton(onClick = { onBack() }) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            "Back",
-                            tint = TextPrimary
-                        )
+                if (onBack != null) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Start
+                    ) {
+                        IconButton(onClick = { onBack() }) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                "Back",
+                                tint = TextPrimary
+                            )
+                        }
                     }
                 }
                 // Logo and Title
@@ -552,7 +551,9 @@ fun GlassLoginTypeCard(
 }
 
 @Composable
-fun BlueCarbonMonitorHomepage(onNewProfileClick: () -> Unit) {
+fun BlueCarbonMonitorHomepage(
+    viewModel: CarbonViewModel
+) {
     val context = LocalContext.current
     var selectedSite by remember { mutableStateOf("Mangrove Restoration Site") }
     var photoUri by remember { mutableStateOf<Uri?>(null) }
@@ -685,7 +686,16 @@ fun BlueCarbonMonitorHomepage(onNewProfileClick: () -> Unit) {
         // Simulate upload
         android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
             isUploading = false
-            Toast.makeText(context, "Uploaded to analysis!", Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                context, 
+                "✓ Submission successful! Your data is being verified by admin before adding to blockchain.", 
+                Toast.LENGTH_LONG
+            ).show()
+            // Reset after submission
+            photoUri = null
+            showPhotoPreview = false
+            latitude = null
+            longitude = null
         }, 1500)
     }
 
@@ -712,41 +722,38 @@ fun BlueCarbonMonitorHomepage(onNewProfileClick: () -> Unit) {
                     .padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(
-                    "Blue Carbon Monitor",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = TextPrimary,
-                    textAlign = TextAlign.Center
-                )
-                Text(
-                    selectedSite,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TextSecondary,
-                    textAlign = TextAlign.Center
-                )
-            }
-
-            // New Profile Button - Centered
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Button(
-                    onClick = onNewProfileClick,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = AccentEmerald.copy(alpha = 0.25f)
-                    ),
-                    shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.dp, GlassWhite.copy(alpha = 0.12f))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.Person, null, tint = PrimaryGreen)
-                    Spacer(Modifier.width(8.dp))
-                    Text("New Profile data", color = TextPrimary)
+                    Spacer(Modifier.width(48.dp)) // Balance the logout button
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            "Blue Carbon Monitor",
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary,
+                            textAlign = TextAlign.Center
+                        )
+                        Text(
+                            selectedSite,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = TextSecondary,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                    IconButton(onClick = { viewModel.logout() }) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ExitToApp,
+                            "Logout",
+                            tint = TextPrimary
+                        )
+                    }
                 }
             }
+
+            // Profile Button - Centered (hidden with new flow)
 
             // Main Content Area - Centered
             Box(
@@ -1180,17 +1187,23 @@ fun CarbonRegistryApp(viewModel: CarbonViewModel) {
             )
         },
         bottomBar = {
-            BottomNavigationBar(selectedScreen) { selectedScreen = it }
+            BottomNavigationBar(
+                selectedScreen = selectedScreen,
+                onScreenSelected = { selectedScreen = it },
+                isAdmin = authState.userType == CarbonViewModel.UserType.ADMIN
+            )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         Box(modifier = Modifier.padding(padding)) {
+            val isAdmin = authState.userType == CarbonViewModel.UserType.ADMIN
             when (selectedScreen) {
                 Screen.Dashboard -> DashboardScreen(viewModel)
                 Screen.Projects -> ProjectsScreen(viewModel)
                 Screen.Credits -> CreditsScreen(viewModel)
                 Screen.Wallet -> WalletScreen(viewModel)
                 Screen.Profile -> ProfileScreen(viewModel)
+                Screen.AdminVerification -> if (isAdmin) AdminVerificationScreen(viewModel)
             }
 
             if (uiState is UiState.Loading) {
@@ -1233,12 +1246,37 @@ fun CarbonRegistryApp(viewModel: CarbonViewModel) {
 }
 
 @Composable
-fun BottomNavigationBar(selectedScreen: Screen, onScreenSelected: (Screen) -> Unit) {
+fun BottomNavigationBar(
+    selectedScreen: Screen,
+    onScreenSelected: (Screen) -> Unit,
+    isAdmin: Boolean
+) {
+    val screens = remember(isAdmin) {
+        if (isAdmin) {
+            listOf(
+                Screen.Dashboard,
+                Screen.Projects,
+                Screen.Credits,
+                Screen.Wallet,
+                Screen.Profile,
+                Screen.AdminVerification
+            )
+        } else {
+            listOf(
+                Screen.Dashboard,
+                Screen.Projects,
+                Screen.Credits,
+                Screen.Wallet,
+                Screen.Profile
+            )
+        }
+    }
+
     NavigationBar(
         containerColor = DarkSurface,
         tonalElevation = 8.dp
     ) {
-        Screen.values().forEach { screen ->
+        screens.forEach { screen ->
             NavigationBarItem(
                 icon = { Icon(screen.icon, contentDescription = screen.title) },
                 label = { Text(screen.title) },
@@ -2395,5 +2433,6 @@ enum class Screen(val title: String, val icon: ImageVector) {
     Projects("Projects", Icons.Default.Star),
     Credits("Credits", Icons.Default.Info),
     Wallet("Wallet", Icons.Default.Settings),
-    Profile("Profile", Icons.Default.Person)
+    Profile("Profile", Icons.Default.Person),
+    AdminVerification("Verification", Icons.Default.Check)
 }

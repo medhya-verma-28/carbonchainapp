@@ -156,3 +156,32 @@ enum class VerificationStatus : Parcelable {
     PENDING,
     REQUIRES_REVISION
 }
+
+@Parcelize
+data class UserSubmission(
+    val id: String = UUID.randomUUID().toString(),
+    val submissionDate: Long = System.currentTimeMillis(),
+    val location: String,
+    val dataQuality: String, // "High", "Medium", "Low"
+    val status: SubmissionStatus,
+    val co2Value: Double, // in tons
+    val hectaresValue: Double,
+    val vegetationCoverage: Double, // percentage
+    val aiConfidence: Double, // percentage
+    val imageUrl: String? = null,
+    val coordinates: Coordinates?,
+    val gpsVerified: Boolean,
+    val satelliteDataVerified: Boolean,
+    val imageQualityVerified: Boolean,
+    val coordinatesWithinRange: Boolean,
+    val submitterName: String,
+    val submitterEmail: String,
+    val notes: String = ""
+) : Parcelable
+
+@Parcelize
+enum class SubmissionStatus : Parcelable {
+    PENDING,
+    APPROVED,
+    REJECTED
+}
