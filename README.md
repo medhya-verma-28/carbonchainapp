@@ -5,6 +5,32 @@ blockchain-based registry. Built with Jetpack Compose and featuring a beautiful,
 
 ## ✨ Features
 
+### 🔐 Dual Login System
+
+- **User Login**: Access Blue Carbon Monitor for data collection and carbon credit tracking
+- **Admin Login**: Streamlined verification portal with profile management
+
+### 📱 User Features (Blue Carbon Monitor)
+
+- **Photo Documentation**: Capture or upload photos of carbon offset sites
+- **GPS Location Tracking**: Automatic coordinate capture with verification
+- **Data Collection**: Submit environmental data for admin verification
+- **Profile Section**: View your carbon credits portfolio
+    - Credits Owned (tCO₂)
+    - Credits Retired (tCO₂)
+    - Wallet Address
+    - User information
+
+### 👨‍💼 Admin Features (Simplified Interface)
+
+- **Profile Management**: View admin account details and carbon credit portfolio
+- **Verification Portal**: Review and approve/reject user submissions
+    - GPS verification
+    - Satellite data cross-referencing
+    - Image quality standards
+    - Detailed submission analysis
+    - Blockchain publishing
+
 ### 📊 Dashboard
 
 - **Real-time Statistics**: Track global CO₂ offset, active projects, and available credits
@@ -81,7 +107,7 @@ app/src/main/java/com/runanywhere/startup_hackathon20/
 
 1. **Clone the repository**
 ```bash
-git clone https://github.com/Nishat2006/carbonchainapp.git
+git clone https://github.com/medhya-verma-28/carbonchainapp.git
 cd carbonchainapp
 ```
 
