@@ -14,6 +14,7 @@ import androidx.activity.viewModels
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -24,6 +25,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -43,6 +46,9 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.Dialog
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import coil.compose.AsyncImage
@@ -59,18 +65,18 @@ import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.*
 
-// Dark Theme Colors - Green-Blue Gradient Theme
-val DarkBackground = Color(0xFF0A1E27)
-val DarkSurface = Color(0xFF0F2830)
-val PrimaryGreen = Color(0xFF10B981)
-val PrimaryTeal = Color(0xFF14B8A6)
-val PrimaryBlue = Color(0xFF06B6D4)
-val SecondaryGreen = Color(0xFF059669)
-val AccentCyan = Color(0xFF22D3EE)
-val AccentEmerald = Color(0xFF34D399)
+// Dark Theme Colors - Green-Blue Gradient Theme (Updated for better text visibility)
+val DarkBackground = Color(0xFF07151A)
+val DarkSurface = Color(0xFF0A2326)
+val PrimaryGreen = Color(0xFF0EA676)
+val PrimaryTeal = Color(0xFF109893)
+val PrimaryBlue = Color(0xFF0894B4)
+val SecondaryGreen = Color(0xFF036D56)
+val AccentCyan = Color(0xFF14C9E6)
+val AccentEmerald = Color(0xFF1EC197)
 val GlassWhite = Color(0xFFFFFFFF)
 val TextPrimary = Color(0xFFFFFFFF)
-val TextSecondary = Color(0xFFB4C6CC)
+val TextSecondary = Color(0xFFA6B9C4)
 
 class MainActivity : ComponentActivity() {
     private val viewModel: CarbonViewModel by viewModels()
@@ -162,10 +168,10 @@ fun LoginScreen(
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(
-                            Color(0xFF1E1B4B),
-                            Color(0xFF312E81),
-                            Color(0xFF4338CA),
-                            Color(0xFF6366F1)
+                            Color(0xFF07151A),
+                            Color(0xFF0A2326),
+                            Color(0xFF0C3339),
+                            Color(0xFF0A2832)
                         )
                     )
                 )
@@ -562,6 +568,17 @@ fun BlueCarbonMonitorHomepage(
     var isGettingLocation by remember { mutableStateOf(false) }
     var isUploading by remember { mutableStateOf(false) }
     var showPhotoPreview by remember { mutableStateOf(false) }
+    var showHistoryDrawer by remember { mutableStateOf(false) }
+    var selectedPendingSubmission by remember { mutableStateOf<UserSubmission?>(null) }
+    var selectedApprovedRegistry by remember { mutableStateOf<CarbonRegistrySubmission?>(null) }
+
+    // Multi-step portal flow
+    var showBlockchainRegistryForm by remember { mutableStateOf(false) }
+    var showSmartContractsPortal by remember { mutableStateOf(false) }
+    var showCarbonMarketplace by remember { mutableStateOf(false) }
+    var registryFormData by remember { mutableStateOf(BlockchainRegistryForm()) }
+    var smartContractData by remember { mutableStateOf<SmartContractData?>(null) }
+    var marketplaceData by remember { mutableStateOf<CarbonMarketplace?>(null) }
 
     // For gallery picker
     var galleryPhotoUri by remember { mutableStateOf<Uri?>(null) }
@@ -569,15 +586,46 @@ fun BlueCarbonMonitorHomepage(
     // For carbon credits profile section
     val wallet by viewModel.userWallet.collectAsState()
     val authState by viewModel.authState.collectAsState()
+    val uiState by viewModel.uiState.collectAsState()
 
-    // Create photo file (using remember for stable file across recompositions)
+    // Get user's carbon registries for history
+    val carbonRegistries = remember(authState.username) {
+        derivedStateOf { viewModel.getUserCarbonRegistries() }
+    }
+    val pendingSubmissions = remember(authState.username) {
+        derivedStateOf { viewModel.getUserPendingSubmissions() }
+    }
+
+    // Show success/error message and reset form if needed
+    LaunchedEffect(uiState) {
+        when (uiState) {
+            is UiState.Success -> {
+                Toast.makeText(context, (uiState as UiState.Success).message, Toast.LENGTH_LONG)
+                    .show()
+                viewModel.clearUiState()
+                // Reset after successful submission
+                photoUri = null
+                showPhotoPreview = false
+                latitude = null
+                longitude = null
+            }
+
+            is UiState.Error -> {
+                Toast.makeText(context, (uiState as UiState.Error).message, Toast.LENGTH_LONG)
+                    .show()
+                viewModel.clearUiState()
+            }
+
+            else -> {}
+        }
+    }
+
+    // Camera and gallery/location logic as previously
     val photoFile = remember {
         val ts = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
         val fileName = "carbon_photo_$ts.jpg"
         File(context.cacheDir, fileName)
     }
-
-    // Create URI for camera
     val uri = remember {
         FileProvider.getUriForFile(
             context,
@@ -585,8 +633,6 @@ fun BlueCarbonMonitorHomepage(
             photoFile
         )
     }
-
-    // Camera launcher
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture()
     ) { success ->
@@ -598,8 +644,6 @@ fun BlueCarbonMonitorHomepage(
             Toast.makeText(context, "Failed to capture photo", Toast.LENGTH_SHORT).show()
         }
     }
-
-    // Camera permission launcher
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
@@ -609,8 +653,6 @@ fun BlueCarbonMonitorHomepage(
             Toast.makeText(context, "Camera permission required", Toast.LENGTH_SHORT).show()
         }
     }
-
-    // Gallery picker launcher
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { selectedUri: Uri? ->
@@ -620,8 +662,6 @@ fun BlueCarbonMonitorHomepage(
             Toast.makeText(context, "Photo selected from gallery!", Toast.LENGTH_SHORT).show()
         }
     }
-
-    // Location permission launcher  
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
@@ -637,8 +677,6 @@ fun BlueCarbonMonitorHomepage(
             Toast.makeText(context, "Location permission required", Toast.LENGTH_SHORT).show()
         }
     }
-
-    // Camera capture function
     fun capturePhoto() {
         when {
             ContextCompat.checkSelfPermission(
@@ -652,13 +690,9 @@ fun BlueCarbonMonitorHomepage(
             }
         }
     }
-
-    // Gallery pick function
     fun pickFromGallery() {
         galleryLauncher.launch("image/*")
     }
-
-    // Location update function
     fun updateLocation() {
         isGettingLocation = true
         when {
@@ -678,30 +712,20 @@ fun BlueCarbonMonitorHomepage(
             }
         }
     }
-
-    // Upload simulation
     fun uploadToAnalysis() {
         if (photoUri == null) {
             Toast.makeText(context, "Please capture or select a photo first", Toast.LENGTH_SHORT)
                 .show()
             return
         }
-        isUploading = true
-        // Simulate upload
-        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-            isUploading = false
-            Toast.makeText(
-                context, 
-                "✓ Submission successful! Your data is being verified by admin before adding to blockchain.", 
-                Toast.LENGTH_LONG
-            ).show()
-            // Reset after submission
-            photoUri = null
-            showPhotoPreview = false
-            latitude = null
-            longitude = null
-        }, 1500)
+        viewModel.submitCarbonRegistry(
+            photoUri = photoUri.toString(),
+            latitude = latitude,
+            longitude = longitude,
+            selectedSite = selectedSite
+        )
     }
+
 
     Box(
         modifier = Modifier
@@ -709,13 +733,14 @@ fun BlueCarbonMonitorHomepage(
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
-                        PrimaryGreen,
-                        PrimaryTeal,
-                        PrimaryBlue
+                        Color(0xFF0A2326),
+                        Color(0xFF07151A),
+                        Color(0xFF0A2326)
                     )
                 )
             )
     ) {
+        // Main Content Area and top bar - BELOW History Drawer
         Column(
             modifier = Modifier.fillMaxSize()
         ) {
@@ -731,7 +756,13 @@ fun BlueCarbonMonitorHomepage(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Spacer(Modifier.width(48.dp)) // Balance the logout button
+                    IconButton(onClick = { showHistoryDrawer = true }) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.List,
+                            "History",
+                            tint = AccentCyan
+                        )
+                    }
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
                             "Blue Carbon Monitor",
@@ -893,7 +924,7 @@ fun BlueCarbonMonitorHomepage(
                         }
                     }
 
-                    // Upload to Analysis Button - Right after Photo Documentation
+                    // Upload to Analysis Button
                     Button(
                         onClick = { uploadToAnalysis() },
                         colors = ButtonDefaults.buttonColors(
@@ -903,7 +934,7 @@ fun BlueCarbonMonitorHomepage(
                         shape = RoundedCornerShape(12.dp),
                         enabled = !isUploading && photoUri != null
                     ) {
-                        if (isUploading) {
+                        if (uiState is UiState.Loading) {
                             CircularProgressIndicator(
                                 color = Color.White,
                                 modifier = Modifier.size(24.dp),
@@ -916,7 +947,1011 @@ fun BlueCarbonMonitorHomepage(
                                 fontWeight = FontWeight.Bold
                             )
                         } else {
-                            Icon(Icons.Default.Send, null)
+                            Icon(Icons.AutoMirrored.Filled.Send, null)
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                "Upload to Analysis",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
+                    // Location Data Card
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .glassEffect()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.LocationOn,
+                                    contentDescription = null,
+                                    tint = Color(0xFFEF4444),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Text(
+                                    "Location Data",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextPrimary
+                                )
+                            }
+
+                            Text(
+                                "Coordinates:",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextSecondary
+                            )
+
+                            if (latitude != null && longitude != null) {
+                                Text(
+                                    "$latitude, $longitude",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = TextPrimary,
+                                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                                )
+                            } else {
+                                Text(
+                                    "Not available",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = TextSecondary
+                                )
+                            }
+
+                            Button(
+                                onClick = { updateLocation() },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = PrimaryBlue
+                                ),
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(8.dp),
+                                enabled = !isGettingLocation
+                            ) {
+                                if (isGettingLocation) {
+                                    CircularProgressIndicator(
+                                        color = Color.White,
+                                        modifier = Modifier.size(16.dp),
+                                        strokeWidth = 2.dp
+                                    )
+                                    Spacer(Modifier.width(6.dp))
+                                    Text("Locating...", style = MaterialTheme.typography.bodySmall)
+                                } else {
+                                    Icon(
+                                        Icons.Default.Refresh,
+                                        null,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(Modifier.width(4.dp))
+                                    Text(
+                                        "Update Location",
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Collection Status Card
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .glassEffect()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Call,
+                                    contentDescription = null,
+                                    tint = PrimaryGreen,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Text(
+                                    "Collection Status",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextPrimary
+                                )
+                            }
+
+                            Text(
+                                "Points collected:",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextSecondary
+                            )
+
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(8.dp)
+                                        .background(
+                                            if (latitude != null && longitude != null) PrimaryGreen else Color.Gray,
+                                            CircleShape
+                                        )
+                                )
+                                Text(
+                                    if (latitude != null && longitude != null) "GPS coordinates" else "GPS pending",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = TextPrimary
+                                )
+                            }
+
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(8.dp)
+                                        .background(
+                                            if (photoUri != null) PrimaryGreen else Color.Gray,
+                                            CircleShape
+                                        )
+                                )
+                                Text(
+                                    if (photoUri != null) "Photo captured" else "Awaiting photo",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = TextPrimary
+                                )
+                            }
+                        }
+                    }
+
+                    // User Profile Section: Carbon Credits
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .glassEffect()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Person,
+                                    contentDescription = null,
+                                    tint = PrimaryGreen,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Text(
+                                    "Profile",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextPrimary
+                                )
+                            }
+
+                            // Username
+                            Text(
+                                authState.username.orEmpty(),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
+                            // Email
+                            if (!authState.email.isNullOrEmpty()) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(
+                                        Icons.Default.Email,
+                                        contentDescription = null,
+                                        tint = TextSecondary,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(
+                                        authState.email.orEmpty(),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = TextSecondary
+                                    )
+                                }
+                            }
+                            Spacer(Modifier.height(4.dp))
+                            // Credits Info
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column {
+                                    Text(
+                                        "Owned",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = TextSecondary
+                                    )
+                                    Text(
+                                        formatNumber(wallet?.totalCreditsOwned ?: 0.0) + " tCO₂",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = PrimaryGreen
+                                    )
+                                }
+                                Column(horizontalAlignment = Alignment.End) {
+                                    Text(
+                                        "Retired",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = TextSecondary
+                                    )
+                                    Text(
+                                        formatNumber(wallet?.totalCreditsRetired ?: 0.0) + " tCO₂",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = PrimaryTeal
+                                    )
+                                }
+                            }
+                            Spacer(Modifier.height(4.dp))
+                            // Wallet Address
+                            Text(
+                                "Wallet: " + (wallet?.address?.take(20) ?: "Not created") + "...",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = TextSecondary,
+                                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // History Drawer - ABOVE Main Content with completely opaque background
+        AnimatedVisibility(
+            visible = showHistoryDrawer,
+            enter = slideInHorizontally(
+                initialOffsetX = { -it },
+                animationSpec = tween(300)
+            ) + fadeIn(animationSpec = tween(300)),
+            exit = slideOutHorizontally(
+                targetOffsetX = { -it },
+                animationSpec = tween(300)
+            ) + fadeOut(animationSpec = tween(300))
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+            ) {
+                // Scrim overlay to block and dim background content
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.6f))
+                        .clickable(
+                            onClick = { showHistoryDrawer = false },
+                            indication = null,
+                            interactionSource = remember { MutableInteractionSource() }
+                        )
+                )
+
+                // Drawer surface - completely opaque with dark green background
+                Surface(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .width(340.dp)
+                        .align(Alignment.CenterStart),
+                    color = Color(0xFF0A2326), // Solid dark green - completely opaque
+                    tonalElevation = 0.dp,
+                    shadowElevation = 8.dp
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(20.dp)
+                    ) {
+                        // Drawer Header
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.DateRange,
+                                    contentDescription = null,
+                                    tint = AccentCyan,
+                                    modifier = Modifier.size(28.dp)
+                                )
+                                Text(
+                                    "History",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextPrimary
+                                )
+                            }
+                            IconButton(onClick = { showHistoryDrawer = false }) {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = "Close history",
+                                    tint = TextPrimary,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                        }
+
+                        Spacer(Modifier.height(8.dp))
+
+                        Text(
+                            "All Submissions",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = TextSecondary
+                        )
+
+                        Spacer(Modifier.height(16.dp))
+
+                        // List of Registry Submissions
+                        val totalSubmissions =
+                            pendingSubmissions.value.size + carbonRegistries.value.size
+                        if (totalSubmissions == 0) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(
+                                        Icons.Default.Info,
+                                        contentDescription = null,
+                                        tint = TextSecondary,
+                                        modifier = Modifier.size(64.dp)
+                                    )
+                                    Spacer(Modifier.height(12.dp))
+                                    Text(
+                                        "No submissions yet",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = TextSecondary
+                                    )
+                                    Spacer(Modifier.height(4.dp))
+                                    Text(
+                                        "Upload your first carbon registry data",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = TextSecondary.copy(alpha = 0.7f),
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+                            }
+                        } else {
+                            LazyColumn(
+                                verticalArrangement = Arrangement.spacedBy(12.dp),
+                                modifier = Modifier.fillMaxSize()
+                            ) {
+                                // Show pending submissions
+                                items(pendingSubmissions.value) { submission ->
+                                    HistoryItemCard(
+                                        id = submission.id,
+                                        location = submission.location,
+                                        date = formatDate(submission.submissionDate),
+                                        status = submission.status.name,
+                                        statusColor = when (submission.status) {
+                                            SubmissionStatus.PENDING -> AccentCyan
+                                            SubmissionStatus.APPROVED -> PrimaryGreen
+                                            SubmissionStatus.REJECTED -> Color(0xFFEF4444)
+                                        },
+                                        onClick = {
+                                            selectedPendingSubmission = submission
+                                            showHistoryDrawer = false
+                                        }
+                                    )
+                                }
+                                // Show approved/registered submissions
+                                items(carbonRegistries.value) { registry ->
+                                    HistoryItemCard(
+                                        id = registry.id,
+                                        location = registry.location,
+                                        date = formatDate(registry.submissionDate),
+                                        status = "REGISTERED",
+                                        statusColor = PrimaryGreen,
+                                        onClick = {
+                                            selectedApprovedRegistry = registry
+                                            registryFormData = BlockchainRegistryForm()
+                                            showHistoryDrawer = false
+                                            showBlockchainRegistryForm = true
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Dialogs Section - Above everything else at screen level
+        // Pending Submission Details Dialog
+        if (selectedPendingSubmission != null) {
+            Dialog(
+                onDismissRequest = { selectedPendingSubmission = null },
+                properties = DialogProperties(usePlatformDefaultWidth = false)
+            ) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth(0.9f)
+                        .wrapContentHeight(),
+                    color = DarkSurface,
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                "Submission Details",
+                                style = MaterialTheme.typography.titleLarge,
+                                color = TextPrimary,
+                                fontWeight = FontWeight.Bold
+                            )
+                            IconButton(onClick = { selectedPendingSubmission = null }) {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = "Close",
+                                    tint = TextPrimary
+                                )
+                            }
+                        }
+
+                        Spacer(Modifier.height(8.dp))
+
+                        if (selectedPendingSubmission?.status == SubmissionStatus.PENDING) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(
+                                        AccentCyan.copy(alpha = 0.15f),
+                                        RoundedCornerShape(12.dp)
+                                    )
+                                    .padding(16.dp)
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Icon(
+                                        Icons.Default.Info,
+                                        contentDescription = null,
+                                        tint = AccentCyan,
+                                        modifier = Modifier.size(48.dp)
+                                    )
+                                    Spacer(Modifier.height(12.dp))
+                                    Text(
+                                        "⏳ Awaiting Verification",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = TextPrimary,
+                                        textAlign = TextAlign.Center
+                                    )
+                                    Spacer(Modifier.height(8.dp))
+                                    Text(
+                                        "Your carbon registry request is pending admin approval. Please check back later.",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = TextSecondary,
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+                            }
+                        } else if (selectedPendingSubmission?.status == SubmissionStatus.REJECTED) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(
+                                        Color(0xFFEF4444).copy(alpha = 0.15f),
+                                        RoundedCornerShape(12.dp)
+                                    )
+                                    .padding(16.dp)
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Icon(
+                                        Icons.Default.Close,
+                                        contentDescription = null,
+                                        tint = Color(0xFFEF4444),
+                                        modifier = Modifier.size(48.dp)
+                                    )
+                                    Spacer(Modifier.height(12.dp))
+                                    Text(
+                                        "❌ Submission Rejected",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = TextPrimary,
+                                        textAlign = TextAlign.Center
+                                    )
+                                    Spacer(Modifier.height(8.dp))
+                                    Text(
+                                        "Your submission did not meet verification requirements.",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = TextSecondary,
+                                        textAlign = TextAlign.Center
+                                    )
+                                    if (!selectedPendingSubmission?.notes.isNullOrEmpty()) {
+                                        Spacer(Modifier.height(8.dp))
+                                        Text(
+                                            "Reason: ${selectedPendingSubmission?.notes}",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = TextSecondary,
+                                            textAlign = TextAlign.Center
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(Modifier.height(8.dp))
+
+                        // Submission Info
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(
+                                    Color.White.copy(alpha = 0.05f),
+                                    RoundedCornerShape(12.dp)
+                                )
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            InfoRow("ID", selectedPendingSubmission?.id?.take(16) + "...")
+                            InfoRow("Location", selectedPendingSubmission?.location ?: "-")
+                            InfoRow(
+                                "Submitted",
+                                selectedPendingSubmission?.submissionDate?.let { formatDate(it) }
+                                    ?: "-"
+                            )
+                            InfoRow("Status", selectedPendingSubmission?.status?.name ?: "-")
+                        }
+
+                        if (selectedPendingSubmission?.imageUrl != null) {
+                            Spacer(Modifier.height(8.dp))
+                            AsyncImage(
+                                model = selectedPendingSubmission?.imageUrl,
+                                contentDescription = "Photo",
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(180.dp)
+                                    .clip(RoundedCornerShape(12.dp)),
+                                contentScale = ContentScale.Crop
+                            )
+                        }
+
+                        Spacer(Modifier.height(8.dp))
+
+                        Button(
+                            onClick = { selectedPendingSubmission = null },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
+                        ) {
+                            Text("Close")
+                        }
+                    }
+                }
+            }
+        }
+
+        // Blockchain Registry Form Portal (screen-level)
+        if (selectedApprovedRegistry != null && showBlockchainRegistryForm) {
+            BlockchainRegistryFormPortal(
+                registry = selectedApprovedRegistry!!,
+                formData = registryFormData,
+                onFormDataChange = { registryFormData = it },
+                onDismiss = {
+                    showBlockchainRegistryForm = false
+                    selectedApprovedRegistry = null
+                    registryFormData = BlockchainRegistryForm()
+                },
+                onSubmit = {
+                    // Generate smart contract data
+                    smartContractData = SmartContractData(
+                        transactionStatus = "Completed",
+                        carbonCreditTokens = registryFormData.creditAmount.toDoubleOrNull() ?: 2.3,
+                        tokenStandard = "ERC-20",
+                        network = "BNB",
+                        contractAddress = "0xabc123...def789",
+                        deploymentDate = "10/10/2023",
+                        gasUsed = "340,459",
+                        contractVerification = listOf(
+                            ContractVerificationItem("Source code verified", true),
+                            ContractVerificationItem("Security audit passed", true),
+                            ContractVerificationItem("Compliance checks completed", true)
+                        )
+                    )
+                    showBlockchainRegistryForm = false
+                    showSmartContractsPortal = true
+                }
+            )
+        }
+
+        // Smart Contracts Portal (screen-level)
+        if (showSmartContractsPortal && smartContractData != null) {
+            Dialog(
+                onDismissRequest = {
+                    showSmartContractsPortal = false
+                    smartContractData = null
+                    selectedApprovedRegistry = null
+                },
+                properties = DialogProperties(usePlatformDefaultWidth = false)
+            ) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color(0xFFEDEDED))
+                ) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                "Smart Contracts Portal (stub)",
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(Modifier.height(32.dp))
+                            Button(
+                                onClick = {
+                                    // Generate marketplace data
+                                    marketplaceData = CarbonMarketplace(
+                                        totalVolume = 4517.0,
+                                        activeListings = 23,
+                                        tokenAllocation = TokenAllocation(
+                                            100.0,
+                                            20.0,
+                                            30.0,
+                                            50.0
+                                        ),
+                                        marketPrices = MarketPrices(
+                                            45.17,
+                                            42.22,
+                                            43.89
+                                        ),
+                                        outstandingBids = listOf(
+                                            Bid(
+                                                12.87,
+                                                "Wallet: 0xabc...def",
+                                                "2.5 hours @ \$12.81/ton"
+                                            )
+                                        ),
+                                        transactionHistory = listOf(
+                                            MarketTransaction(
+                                                "Buy",
+                                                12.0,
+                                                12.62,
+                                                "14/12/2023"
+                                            ),
+                                            MarketTransaction(
+                                                "Sell",
+                                                10.0,
+                                                46.16,
+                                                "16/12/2023"
+                                            )
+                                        )
+                                    )
+                                    showSmartContractsPortal = false
+                                    showCarbonMarketplace = true
+                                }
+                            ) {
+                                Text("Proceed to Marketplace")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Carbon Marketplace Portal (screen-level)
+        if (showCarbonMarketplace && marketplaceData != null) {
+            Dialog(
+                onDismissRequest = {
+                    showCarbonMarketplace = false
+                    marketplaceData = null
+                    selectedApprovedRegistry = null
+                },
+                properties = DialogProperties(usePlatformDefaultWidth = false)
+            ) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color(0xFFDCEEFB))
+                ) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                "Carbon Marketplace Portal (stub)",
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(Modifier.height(24.dp))
+                            Button(
+                                onClick = {
+                                    val amount = 10.0
+                                    // Initiate Razorpay payment
+                                    Toast.makeText(
+                                        context,
+                                        "Initiating payment for $amount carbon credits",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                    // TODO: Implement Razorpay SDK integration
+                                }
+                            ) {
+                                Text("Buy Carbon Credits")
+                            }
+                            Spacer(Modifier.height(12.dp))
+                            Button(
+                                onClick = {
+                                    val amount = 5.0
+                                    Toast.makeText(
+                                        context,
+                                        "Listing $amount carbon credits for sale",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            ) {
+                                Text("Sell Carbon Credits")
+                            }
+                            Spacer(Modifier.height(32.dp))
+                            Button(
+                                onClick = {
+                                    showCarbonMarketplace = false
+                                    marketplaceData = null
+                                    selectedApprovedRegistry = null
+                                }
+                            ) {
+                                Text("Close Marketplace")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Main Content Area and top bar
+        Column(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            // Top Bar - Centered
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = { showHistoryDrawer = true }) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.List,
+                            "History",
+                            tint = AccentCyan
+                        )
+                    }
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            "Blue Carbon Monitor",
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary,
+                            textAlign = TextAlign.Center
+                        )
+                        Text(
+                            selectedSite,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = TextSecondary,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                    IconButton(onClick = { viewModel.logout() }) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ExitToApp,
+                            "Logout",
+                            tint = TextPrimary
+                        )
+                    }
+                }
+            }
+
+            // Main Content Area - Centered
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .padding(16.dp),
+                contentAlignment = Alignment.TopCenter
+            ) {
+                // Centered Column with fixed width for all cards
+                Column(
+                    modifier = Modifier
+                        .width(320.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    // Photo Documentation Card
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .glassEffect()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Face,
+                                    contentDescription = null,
+                                    tint = TextSecondary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Text(
+                                    "Photo Documentation",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextPrimary
+                                )
+                            }
+
+                            if (photoUri != null && showPhotoPreview) {
+                                AsyncImage(
+                                    model = photoUri,
+                                    contentDescription = "Captured Photo",
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(120.dp)
+                                        .clip(RoundedCornerShape(12.dp)),
+                                    contentScale = ContentScale.Crop
+                                )
+                                Spacer(Modifier.height(8.dp))
+                                Button(
+                                    onClick = {
+                                        showPhotoPreview = false
+                                        photoUri = null
+                                    },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color(0xFFF44336)
+                                    ),
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.Delete,
+                                        null,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(Modifier.width(4.dp))
+                                    Text("Remove", style = MaterialTheme.typography.bodySmall)
+                                }
+                            } else {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Button(
+                                        onClick = { capturePhoto() },
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = PrimaryGreen
+                                        ),
+                                        shape = RoundedCornerShape(8.dp),
+                                        modifier = Modifier.weight(1f),
+                                        contentPadding = PaddingValues(8.dp)
+                                    ) {
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.Center
+                                        ) {
+                                            Icon(
+                                                Icons.Default.CameraAlt,
+                                                null,
+                                                modifier = Modifier.size(24.dp)
+                                            )
+                                            Spacer(Modifier.height(4.dp))
+                                            Text(
+                                                "Capture\nphoto",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                textAlign = TextAlign.Center
+                                            )
+                                        }
+                                    }
+                                    Button(
+                                        onClick = { pickFromGallery() },
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = PrimaryBlue
+                                        ),
+                                        shape = RoundedCornerShape(8.dp),
+                                        modifier = Modifier.weight(1f),
+                                        contentPadding = PaddingValues(8.dp)
+                                    ) {
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.Center
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Photo,
+                                                null,
+                                                modifier = Modifier.size(24.dp)
+                                            )
+                                            Spacer(Modifier.height(4.dp))
+                                            Text(
+                                                "Upload\nfrom\nGallery",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                textAlign = TextAlign.Center
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Upload to Analysis Button
+                    Button(
+                        onClick = { uploadToAnalysis() },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = AccentEmerald
+                        ),
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        enabled = !isUploading && photoUri != null
+                    ) {
+                        if (uiState is UiState.Loading) {
+                            CircularProgressIndicator(
+                                color = Color.White,
+                                modifier = Modifier.size(24.dp),
+                                strokeWidth = 2.dp
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                "Uploading...",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                        } else {
+                            Icon(Icons.AutoMirrored.Filled.Send, null)
                             Spacer(Modifier.width(8.dp))
                             Text(
                                 "Upload to Analysis",
@@ -1197,6 +2232,388 @@ private fun getLocation(
                 val lat = "%.5f°".format(it.latitude)
                 val lon = "%.5f°".format(it.longitude)
                 onResult(lat, lon)
+            }
+        }
+    }
+}
+
+// Card for submission history item (user or registry)
+@Composable
+fun HistoryItemCard(
+    id: String,
+    location: String?,
+    date: String,
+    status: String,
+    statusColor: Color,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(4.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFF0F3338) // Slightly lighter than drawer background for contrast
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .background(statusColor.copy(alpha = 0.25f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    when (status) {
+                        "PENDING" -> Icons.Default.Info
+                        "APPROVED", "REGISTERED" -> Icons.Default.Check
+                        "REJECTED" -> Icons.Default.Close
+                        else -> Icons.Default.Info
+                    },
+                    contentDescription = null,
+                    tint = statusColor,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    location ?: "-",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = TextPrimary
+                )
+                Text(
+                    date,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = TextSecondary,
+                    maxLines = 1
+                )
+                Text(
+                    id.take(12) + "...",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = TextSecondary.copy(alpha = 0.7f),
+                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                )
+            }
+            Surface(
+                color = statusColor,
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text(
+                    status,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
+    }
+}
+
+// Helper for info row in dialogs
+@Composable
+fun InfoRow(label: String, value: String?) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text(
+            label + ":",
+            style = MaterialTheme.typography.labelMedium,
+            color = TextSecondary,
+            modifier = Modifier.width(90.dp)
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            value.orEmpty(),
+            style = MaterialTheme.typography.bodyMedium,
+            color = TextPrimary,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+// Blockchain Registry Form Portal
+@Composable
+fun BlockchainRegistryFormPortal(
+    registry: CarbonRegistrySubmission,
+    formData: BlockchainRegistryForm,
+    onFormDataChange: (BlockchainRegistryForm) -> Unit,
+    onDismiss: () -> Unit,
+    onSubmit: () -> Unit
+) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color(0xFF8B5CF6)) // Purple background matching image
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(24.dp)
+            ) {
+                // Header
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "Blockchain Registry",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                    IconButton(onClick = onDismiss) {
+                        Icon(Icons.Default.Close, "Close", tint = Color.White)
+                    }
+                }
+                Text(
+                    "Immutable Carbon Credit Ledger",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White.copy(alpha = 0.8f)
+                )
+
+                Spacer(Modifier.height(24.dp))
+
+                // Registration Status
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text("Status", style = MaterialTheme.typography.labelMedium)
+                        Text(
+                            "Registered",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = PrimaryGreen
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text("Block Number", style = MaterialTheme.typography.labelSmall)
+                        Text(
+                            registry.blockNumber,
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text("Transaction", style = MaterialTheme.typography.labelSmall)
+                        Text(
+                            "2023-10-15 14:30:22 UTC",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(20.dp))
+
+                // Credit Details Form
+                Text(
+                    "Credit Details",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+                Spacer(Modifier.height(12.dp))
+
+                OutlinedTextField(
+                    value = formData.creditAmount,
+                    onValueChange = { onFormDataChange(formData.copy(creditAmount = it)) },
+                    label = { Text("Credit Amount*", color = Color.White.copy(alpha = 0.7f)) },
+                    placeholder = { Text("2.3 tCO₂") },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedBorderColor = Color.White,
+                        unfocusedBorderColor = Color.White.copy(alpha = 0.5f)
+                    )
+                )
+
+                Spacer(Modifier.height(12.dp))
+
+                OutlinedTextField(
+                    value = formData.projectArea,
+                    onValueChange = { onFormDataChange(formData.copy(projectArea = it)) },
+                    label = { Text("Project Area*", color = Color.White.copy(alpha = 0.7f)) },
+                    placeholder = { Text("1.2 hectares") },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedBorderColor = Color.White,
+                        unfocusedBorderColor = Color.White.copy(alpha = 0.5f)
+                    )
+                )
+
+                Spacer(Modifier.height(12.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    OutlinedTextField(
+                        value = formData.vintageYear,
+                        onValueChange = { onFormDataChange(formData.copy(vintageYear = it)) },
+                        label = { Text("Vintage Year*", color = Color.White.copy(alpha = 0.7f)) },
+                        placeholder = { Text("2023") },
+                        modifier = Modifier.weight(1f),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedBorderColor = Color.White,
+                            unfocusedBorderColor = Color.White.copy(alpha = 0.5f)
+                        )
+                    )
+
+                    OutlinedTextField(
+                        value = formData.verificationDate,
+                        onValueChange = { onFormDataChange(formData.copy(verificationDate = it)) },
+                        label = {
+                            Text(
+                                "Verification Date*",
+                                color = Color.White.copy(alpha = 0.7f)
+                            )
+                        },
+                        placeholder = { Text("10/10/2023") },
+                        modifier = Modifier.weight(1f),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedBorderColor = Color.White,
+                            unfocusedBorderColor = Color.White.copy(alpha = 0.5f)
+                        )
+                    )
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                // Transaction Hash
+                Text(
+                    "Transaction Hash",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+                Spacer(Modifier.height(8.dp))
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.15f))
+                ) {
+                    Text(
+                        registry.transactionHash,
+                        modifier = Modifier.padding(16.dp),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White,
+                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                    )
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                // Audit Trail
+                Text(
+                    "Audit Trail",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+                Spacer(Modifier.height(8.dp))
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = PrimaryGreen.copy(alpha = 0.2f))
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        registry.auditTrail.forEach { audit ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(vertical = 4.dp)
+                            ) {
+                                Icon(
+                                    if (audit.completed) Icons.Default.Check else Icons.Default.Close,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text(audit.description, color = Color.White)
+                            }
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                // Registry Notes
+                Text(
+                    "Registry Notes",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = formData.registryNotes,
+                    onValueChange = { onFormDataChange(formData.copy(registryNotes = it)) },
+                    placeholder = {
+                        Text(
+                            "Add any additional notes or observations...",
+                            color = Color.White.copy(alpha = 0.5f)
+                        )
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp),
+                    maxLines = 5,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedBorderColor = Color.White,
+                        unfocusedBorderColor = Color.White.copy(alpha = 0.5f)
+                    )
+                )
+
+                Spacer(Modifier.height(24.dp))
+
+                // Submit Button
+                Button(
+                    onClick = onSubmit,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9800)),
+                    enabled = formData.creditAmount.isNotBlank() &&
+                            formData.projectArea.isNotBlank() &&
+                            formData.vintageYear.isNotBlank() &&
+                            formData.verificationDate.isNotBlank()
+                ) {
+                    Text(
+                        "Proceed to Tokenization",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
     }

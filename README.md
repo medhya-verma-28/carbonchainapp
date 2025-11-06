@@ -1,7 +1,8 @@
 # 🌍 Blockchain Carbon Registry System
 
 A modern Android application for tracking, trading, and retiring carbon credits on a
-blockchain-based registry. Built with Jetpack Compose and featuring a beautiful, intuitive UI.
+blockchain-based registry. Built with Jetpack Compose and featuring a beautiful, intuitive UI with
+modern dark theme with green-blue gradient and glass effects.
 
 ## ✨ Features
 
@@ -15,11 +16,23 @@ blockchain-based registry. Built with Jetpack Compose and featuring a beautiful,
 - **Photo Documentation**: Capture or upload photos of carbon offset sites
 - **GPS Location Tracking**: Automatic coordinate capture with verification
 - **Data Collection**: Submit environmental data for admin verification
+- **📜 History Side Menu**: View all your carbon registry submissions in one place
+    - Track pending submissions awaiting admin approval
+    - View approved registrations with blockchain details
+    - Access detailed portal view for registered submissions
+    - Real-time status updates (Pending/Approved/Rejected)
 - **Profile Section**: View your carbon credits portfolio
     - Credits Owned (tCO₂)
     - Credits Retired (tCO₂)
     - Wallet Address
     - User information
+
+### 🎨 Modern Dark Theme
+
+- **Dark Green-Blue Gradient**: Carefully crafted darker gradients for optimal text visibility
+- **Glass Effect UI**: Frosted glass morphism with transparency and blur effects
+- **Accessible Design**: High contrast text with clearly visible content throughout
+- **Smooth Animations**: Slide-in drawers, fade transitions, and loading states
 
 ### 👨‍💼 Admin Features (Simplified Interface)
 
@@ -29,43 +42,96 @@ blockchain-based registry. Built with Jetpack Compose and featuring a beautiful,
     - Satellite data cross-referencing
     - Image quality standards
     - Detailed submission analysis
-    - Blockchain publishing
+  - **Blockchain Publishing**: Approved submissions automatically generate blockchain registry
+    entries
+  - **User Notification**: Users see their submissions reflected in History with updated status
 
-### 📊 Dashboard
+### 🔗 Integrated Workflow
 
-- **Real-time Statistics**: Track global CO₂ offset, active projects, and available credits
-- **Featured Projects**: Browse top carbon offset projects worldwide
-- **User Portfolio**: Monitor your owned and retired carbon credits
-- **Modern Material Design**: Clean, accessible interface with smooth animations
+1. **User Submission**: Users submit carbon registry requests through Blue Carbon Monitor
+2. **Admin Review**: Submissions appear in Admin Verification Portal
+3. **Approval/Rejection**: Admin approves or rejects with notes
+4. **Blockchain Registration**: Approved submissions are published to blockchain
+5. **History Update**: Users can view detailed registry portal in History menu
+6. **Status Messages**: Clear feedback for pending, approved, or rejected submissions
 
-### 🌱 Carbon Projects
+### 📊 Carbon Registry Portal (Approved Submissions)
 
-- **Diverse Project Types**:
-    - 🌳 Reforestation
-    - ☀️ Renewable Energy (Solar & Wind)
-    - ⚡ Energy Efficiency
-    - 🏭 Methane Capture
-    - 🌊 Ocean Conservation
-    - 💨 Carbon Capture & Storage
-    - 🌾 Sustainable Agriculture
+When users click on an approved submission in the History menu, they see a detailed portal with:
 
-- **Search & Filter**: Find projects by name, location, or type
-- **Detailed Information**: View impact metrics, verification standards, and documentation
-- **Geographic Data**: Track project locations with coordinates
+- **Registration Status**: Visual confirmation of blockchain registration
+- **Credit Details**:
+    - Credit Amount (in tCO₂)
+    - Project Area (in hectares)
+    - Vintage Year
+    - Verification Date
+- **Smart Contract Information**:
+    - Contract Address
+    - Network (e.g., Aptos Mainnet)
+    - Token Standard (e.g., APT-20)
+- **Transaction Hash**: Full blockchain transaction hash
+- **Audit Trail**: Checklist of completed verification steps
+    - Initial assessment completed
+    - Satellite analysis verified
+    - Expert verification approved
+    - Third-party compliance confirmed
+    - Blockchain registration complete
 
-### 💳 Carbon Credits
+### 📱 App Screens
 
-- **Credit Management**: Buy, transfer, and retire carbon credits
-- **Blockchain Verification**: Every credit is verified on the blockchain
-- **Status Tracking**: Monitor credit status (Active, Retired, Pending, etc.)
-- **Detailed Metadata**: Serial numbers, vintage year, methodology, and certification bodies
+### 1. Dashboard
 
-### 🔐 Wallet
+- Global impact overview
+- Featured projects carousel
+- Recent credits list
+- Statistics cards (CO₂ offset, active projects, credits)
 
-- **Secure Blockchain Wallet**: Auto-generated cryptographic wallet
-- **Transaction History**: Complete audit trail of all operations
-- **Portfolio Summary**: View owned and retired credits
-- **Blockchain Addresses**: Full transparency with wallet addresses
+### 2. Projects
+
+- Search bar for finding projects
+- Filter by project type (chips)
+- List of all carbon offset projects
+- Detailed project cards with:
+    - Project type icon and color
+    - Location and description
+    - Impact metrics (CO₂ reduced, trees planted, etc.)
+    - Available vs. retired credits
+    - Verification standard
+
+### 3. Credits
+
+- Filter by credit status
+- Detailed credit cards showing:
+    - Serial number
+    - Amount in tonnes CO₂
+    - Price per tonne
+    - Vintage year
+    - Blockchain hash
+- Buy button for active credits
+- Retire button with dialog
+- Verification on blockchain
+
+### 4. Wallet
+
+- Wallet address display
+- Credits owned & retired summary
+- Transaction history
+- Create wallet button (if not exists)
+- Transaction cards with:
+    - Transaction type (issuance, transfer, retirement)
+    - Timestamp and block number
+    - Transaction hash
+    - Amount and status
+
+### 5. History (User Menu)
+
+- **Side Drawer Navigation**: Swipe or tap to open from Blue Carbon Monitor
+- **Submission List**: All user submissions with status badges
+- **Detailed Views**:
+    - Pending: Shows awaiting verification message
+    - Rejected: Shows rejection reason
+    - Approved: Shows full blockchain registry portal
+- **Real-time Sync**: Updates when admin approves/rejects submissions
 
 ## 🏗️ Architecture
 
@@ -134,6 +200,50 @@ When you first launch the app:
 4. **View Credits**: See 4 sample carbon credits available
 5. **Purchase Credits**: Buy credits to add to your wallet
 6. **Retire Credits**: Permanently remove credits from circulation
+
+## 🚀 Using the Carbon Registry System
+
+### As a User (Blue Carbon Monitor)
+
+1. **Login**: Select "User Login" and either login or register
+2. **Submit Carbon Registry Data**:
+    - Tap camera icon to capture or upload a photo of the carbon offset site
+    - Tap location icon to get GPS coordinates
+    - Verify all data is collected (green checkmarks)
+    - Tap "Upload to Analysis" to submit for verification
+3. **Track Submissions**:
+    - Tap the History icon (☰) in the top-left corner
+    - View all your submissions with status badges
+    - Tap any submission to see details:
+        - **Pending**: See "Awaiting Verification" message
+        - **Rejected**: View rejection reason from admin
+        - **Approved**: Access full blockchain registry portal
+4. **View Registry Portal** (for approved submissions):
+    - Registration status with green checkmark
+    - Credit amount and project area
+    - Blockchain transaction hash
+    - Smart contract address
+    - Network and token standard
+    - Complete audit trail
+
+### As an Admin
+
+1. **Login**: Select "Admin Login" (credentials: `admin` / `admin123`)
+2. **Review Submissions**:
+    - Navigate to "Verification" tab
+    - See pending, approved, and rejected submission counts
+    - Tap any submission card to view details
+3. **Verify Submission**:
+    - Review photo, location, and analysis data
+    - Check verification checklist (GPS, satellite data, image quality)
+    - View AI confidence and data quality metrics
+4. **Approve or Reject**:
+    - Tap "Approve & Publish" to register on blockchain
+    - Tap "Reject" and provide a reason
+    - Add notes for the user
+5. **Blockchain Registration**:
+    - Approved submissions automatically generate blockchain entries
+    - Users can view the registry portal in their History
 
 ## 📱 App Screens
 
@@ -226,11 +336,16 @@ The app comes with 5 pre-loaded carbon offset projects:
 ## 🎨 UI/UX Highlights
 
 - **Material 3 Design**: Modern Google Material Design components
+- **Modern Dark Theme**: Dark green-blue gradient with glass morphism effects for enhanced
+  readability
+- **History Side Menu**: Slide-in drawer navigation showing all user submissions
+- **Blockchain Portal View**: Detailed registry information for approved submissions
+- **Status-based Messages**: Clear feedback for pending, approved, and rejected submissions
 - **Color-coded Projects**: Each project type has a unique color scheme
-- **Smooth Animations**: Fade-ins, slides, and loading states
+- **Smooth Animations**: Fade-ins, slides, drawer transitions, and loading states
 - **Responsive Layout**: Works on phones and tablets
-- **Dark Mode Support**: System theme-aware (built into Material 3)
-- **Accessibility**: Proper content descriptions and contrast ratios
+- **Dark Mode Support**: Carefully crafted dark gradients for optimal text visibility
+- **Accessibility**: Proper content descriptions and high contrast ratios
 
 ## 🔧 Configuration
 

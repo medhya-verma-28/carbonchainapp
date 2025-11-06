@@ -6,6 +6,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlin.random.Random
 
 /**
  * Repository for managing carbon credits and projects
@@ -28,6 +29,11 @@ class CarbonRepository(
 
     private val _userSubmissions = MutableStateFlow<List<UserSubmission>>(emptyList())
     val userSubmissions: StateFlow<List<UserSubmission>> = _userSubmissions.asStateFlow()
+
+    private val _carbonRegistrySubmissions =
+        MutableStateFlow<List<CarbonRegistrySubmission>>(emptyList())
+    val carbonRegistrySubmissions: StateFlow<List<CarbonRegistrySubmission>> =
+        _carbonRegistrySubmissions.asStateFlow()
 
     init {
         loadMockData()
@@ -275,7 +281,7 @@ class CarbonRepository(
                 coordinatesWithinRange = true,
                 submitterName = "John Doe",
                 submitterEmail = "john.doe@example.com",
-                notes = "Sample submission for verification"
+                notes = ""
             ),
             UserSubmission(
                 id = "MANS-3822",
@@ -316,6 +322,38 @@ class CarbonRepository(
                 submitterName = "Alice Johnson",
                 submitterEmail = "alice.j@example.com",
                 notes = "Approved and uploaded to blockchain"
+            )
+        )
+
+        // Mock Carbon Registry Submissions (Approved Submissions)
+        _carbonRegistrySubmissions.value = listOf(
+            CarbonRegistrySubmission(
+                id = "MANS-3820",
+                registrationStatus = RegistrationStatus.REGISTERED,
+                blockNumber = "13,546,678",
+                creditAmount = 3.1,
+                projectArea = "1.5 hectares",
+                vintageYear = 2023,
+                verificationDate = "2023-10-15 14:30:22 UTC",
+                transactionHash = "0xa3f2b9c8d1e5f7g4h6i8j0k2l4m6n8o0p2q4r6s8t0u2v4w6x8y0z1a3b5c7d9",
+                contractAddress = "0xabc123...def789",
+                network = "Aptos Mainnet",
+                tokenStandard = "APT-20",
+                auditTrail = listOf(
+                    AuditItem("Initial assessment completed", true),
+                    AuditItem("Satellite analysis verified", true),
+                    AuditItem("Expert verification approved", true),
+                    AuditItem("Third-party compliance confirmed", true),
+                    AuditItem("Blockchain registration complete", true)
+                ),
+                registryNotes = "High quality submission with excellent verification data. Approved for blockchain registration.",
+                imageUrl = "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800",
+                location = "Bangalore, India",
+                coordinates = Coordinates(12.9716, 77.5946),
+                submissionDate = currentTime - 15 * 24 * 60 * 60 * 1000,
+                submitterName = "Alice Johnson",
+                submitterEmail = "alice.j@example.com",
+                status = SubmissionStatus.APPROVED
             )
         )
     }
@@ -403,14 +441,56 @@ class CarbonRepository(
     suspend fun approveSubmission(submissionId: String, notes: String): Result<Unit> {
         return try {
             delay(1000) // Simulate blockchain upload
-            val updatedSubmissions = _userSubmissions.value.map { submission ->
-                if (submission.id == submissionId) {
-                    submission.copy(status = SubmissionStatus.APPROVED, notes = notes)
+            val submission = _userSubmissions.value.find { it.id == submissionId }
+
+            val updatedSubmissions = _userSubmissions.value.map { sub ->
+                if (sub.id == submissionId) {
+                    sub.copy(status = SubmissionStatus.APPROVED, notes = notes)
                 } else {
-                    submission
+                    sub
                 }
             }
             _userSubmissions.value = updatedSubmissions
+
+            // Convert approved submission to CarbonRegistrySubmission
+            submission?.let {
+                val registrySubmission = CarbonRegistrySubmission(
+                    id = it.id,
+                    registrationStatus = RegistrationStatus.REGISTERED,
+                    blockNumber = "13,546,678",
+                    creditAmount = it.co2Value,
+                    projectArea = "${it.hectaresValue} hectares",
+                    vintageYear = 2023,
+                    verificationDate = java.text.SimpleDateFormat(
+                        "yyyy-MM-dd HH:mm:ss UTC",
+                        java.util.Locale.US
+                    ).format(java.util.Date()),
+                    transactionHash = "0x${
+                        java.util.UUID.randomUUID().toString().replace("-", "")
+                    }",
+                    contractAddress = "0xabc123...def789",
+                    network = "Aptos Mainnet",
+                    tokenStandard = "APT-20",
+                    auditTrail = listOf(
+                        AuditItem("Initial assessment completed", true),
+                        AuditItem("Satellite analysis verified", it.satelliteDataVerified),
+                        AuditItem("Expert verification approved", true),
+                        AuditItem("Third-party compliance confirmed", true),
+                        AuditItem("Blockchain registration complete", true)
+                    ),
+                    registryNotes = notes.ifEmpty { "Approved and registered successfully" },
+                    imageUrl = it.imageUrl,
+                    location = it.location,
+                    coordinates = it.coordinates,
+                    submissionDate = it.submissionDate,
+                    submitterName = it.submitterName,
+                    submitterEmail = it.submitterEmail,
+                    status = SubmissionStatus.APPROVED
+                )
+                _carbonRegistrySubmissions.value =
+                    _carbonRegistrySubmissions.value + registrySubmission
+            }
+
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -432,5 +512,59 @@ class CarbonRepository(
         } catch (e: Exception) {
             Result.failure(e)
         }
+    }
+
+    suspend fun submitCarbonRegistry(
+        photoUri: String?,
+        latitude: String?,
+        longitude: String?,
+        selectedSite: String,
+        username: String,
+        email: String
+    ): Result<UserSubmission> {
+        return try {
+            delay(1500) // Simulate upload
+
+            val coords = if (latitude != null && longitude != null) {
+                // Parse coordinates - remove the degree symbol
+                val lat = latitude.replace("°", "").toDoubleOrNull() ?: 0.0
+                val lon = longitude.replace("°", "").toDoubleOrNull() ?: 0.0
+                Coordinates(lat, lon)
+            } else null
+
+            val submission = UserSubmission(
+                id = "MANS-${Random.nextInt(1000, 9999)}",
+                submissionDate = System.currentTimeMillis(),
+                location = selectedSite,
+                dataQuality = if (photoUri != null && coords != null) "High" else "Medium",
+                status = SubmissionStatus.PENDING,
+                co2Value = Random.nextDouble(1.5, 3.5),
+                hectaresValue = Random.nextDouble(0.8, 2.0),
+                vegetationCoverage = Random.nextDouble(60.0, 90.0),
+                aiConfidence = Random.nextDouble(75.0, 95.0),
+                imageUrl = photoUri,
+                coordinates = coords,
+                gpsVerified = coords != null,
+                satelliteDataVerified = Random.nextBoolean(),
+                imageQualityVerified = photoUri != null,
+                coordinatesWithinRange = coords != null,
+                submitterName = username,
+                submitterEmail = email,
+                notes = ""
+            )
+
+            _userSubmissions.value = _userSubmissions.value + submission
+            Result.success(submission)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    fun getUserSubmissions(username: String): List<UserSubmission> {
+        return _userSubmissions.value.filter { it.submitterName == username }
+    }
+
+    fun getCarbonRegistrySubmissions(username: String): List<CarbonRegistrySubmission> {
+        return _carbonRegistrySubmissions.value.filter { it.submitterName == username }
     }
 }

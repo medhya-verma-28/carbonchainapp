@@ -23,6 +23,7 @@ class CarbonViewModel : ViewModel() {
     val transactions = repository.transactions
     val userWallet = repository.userWallet
     val userSubmissions = repository.userSubmissions
+    val carbonRegistrySubmissions = repository.carbonRegistrySubmissions
 
     // UI State
     private val _uiState = MutableStateFlow<UiState>(UiState.Idle)
@@ -250,6 +251,44 @@ class CarbonViewModel : ViewModel() {
                 }
             )
         }
+    }
+
+    fun submitCarbonRegistry(
+        photoUri: String?,
+        latitude: String?,
+        longitude: String?,
+        selectedSite: String
+    ) {
+        viewModelScope.launch {
+            _uiState.value = UiState.Loading
+            val username = authState.value.username ?: "Unknown"
+            val email = authState.value.email ?: "no-email@example.com"
+
+            val result = repository.submitCarbonRegistry(
+                photoUri, latitude, longitude, selectedSite, username, email
+            )
+
+            result.fold(
+                onSuccess = { submission ->
+                    _uiState.value = UiState.Success(
+                        "✓ Submission successful! Your data is being verified by admin before adding to blockchain.\n\nSubmission ID: ${submission.id}"
+                    )
+                },
+                onFailure = { error ->
+                    _uiState.value = UiState.Error(error.message ?: "Submission failed")
+                }
+            )
+        }
+    }
+
+    fun getUserCarbonRegistries(): List<CarbonRegistrySubmission> {
+        val username = authState.value.username ?: return emptyList()
+        return repository.getCarbonRegistrySubmissions(username)
+    }
+
+    fun getUserPendingSubmissions(): List<UserSubmission> {
+        val username = authState.value.username ?: return emptyList()
+        return repository.getUserSubmissions(username)
     }
 }
 

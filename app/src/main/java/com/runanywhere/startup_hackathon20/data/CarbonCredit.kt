@@ -185,3 +185,119 @@ enum class SubmissionStatus : Parcelable {
     APPROVED,
     REJECTED
 }
+
+@Parcelize
+data class CarbonRegistrySubmission(
+    val id: String = UUID.randomUUID().toString(),
+    val registrationStatus: RegistrationStatus,
+    val blockNumber: String,
+    val creditAmount: Double, // in tonnes CO2
+    val projectArea: String, // in hectares
+    val vintageYear: Int,
+    val verificationDate: String,
+    val transactionHash: String,
+    val contractAddress: String,
+    val network: String,
+    val tokenStandard: String,
+    val auditTrail: List<AuditItem>,
+    val registryNotes: String,
+    val imageUrl: String? = null,
+    val location: String,
+    val coordinates: Coordinates?,
+    val submissionDate: Long = System.currentTimeMillis(),
+    val submitterName: String,
+    val submitterEmail: String,
+    val status: SubmissionStatus
+) : Parcelable
+
+@Parcelize
+data class AuditItem(
+    val description: String,
+    val completed: Boolean
+) : Parcelable
+
+@Parcelize
+enum class RegistrationStatus : Parcelable {
+    REGISTERED,
+    PENDING,
+    REJECTED
+}
+
+// Blockchain Registry Form Data
+@Parcelize
+data class BlockchainRegistryForm(
+    val creditAmount: String = "",
+    val projectArea: String = "",
+    val vintageYear: String = "",
+    val verificationDate: String = "",
+    val registryNotes: String = ""
+) : Parcelable
+
+// Smart Contract Data
+@Parcelize
+data class SmartContractData(
+    val transactionStatus: String = "Pending",
+    val carbonCreditTokens: Double = 0.0,
+    val tokenStandard: String = "ERC-20",
+    val network: String = "BNB",
+    val tokenGeneration: String = "ERC-20",
+    val contractAddress: String = "",
+    val deploymentDate: String = "",
+    val gasUsed: String = "",
+    val accessFunctions: List<String> = listOf(
+        "transferToken(address,amount)",
+        "approveDelegate(address)",
+        "retireCredit()",
+        "burnToken(address)"
+    ),
+    val contractVerification: List<ContractVerificationItem> = listOf(),
+    val contractNotes: String = ""
+) : Parcelable
+
+@Parcelize
+data class ContractVerificationItem(
+    val description: String,
+    val verified: Boolean
+) : Parcelable
+
+// Carbon Marketplace Data
+@Parcelize
+data class CarbonMarketplace(
+    val totalVolume: Double = 0.0,
+    val activeListings: Int = 0,
+    val tokenAllocation: TokenAllocation = TokenAllocation(),
+    val marketPrices: MarketPrices = MarketPrices(),
+    val outstandingBids: List<Bid> = listOf(),
+    val transactionHistory: List<MarketTransaction> = listOf(),
+    val marketNotes: String = ""
+) : Parcelable
+
+@Parcelize
+data class TokenAllocation(
+    val allocatedToken: Double = 100.0,
+    val stakedToken: Double = 20.0,
+    val burnedToken: Double = 30.0,
+    val remainingToken: Double = 50.0
+) : Parcelable
+
+@Parcelize
+data class MarketPrices(
+    val carbonOffset: Double = 45.17,
+    val renewable: Double = 42.22,
+    val forest: Double = 43.89
+) : Parcelable
+
+@Parcelize
+data class Bid(
+    val amount: Double,
+    val bidder: String,
+    val expiresIn: String
+) : Parcelable
+
+@Parcelize
+data class MarketTransaction(
+    val type: String, // "Buy" or "Sell"
+    val amount: Double,
+    val price: Double,
+    val date: String
+) : Parcelable
