@@ -568,6 +568,40 @@ class CarbonRepository(
         return _carbonRegistrySubmissions.value.filter { it.submitterName == username }
     }
 
+    suspend fun buyCarbonCredits(amount: Double): Result<Unit> {
+        return try {
+            delay(500)
+            _userWallet.value?.let { wallet ->
+                _userWallet.value = wallet.copy(
+                    totalCreditsOwned = wallet.totalCreditsOwned + amount,
+                    balance = wallet.balance - (amount * 45.0) // Assuming $45 per credit
+                )
+            }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun sellCarbonCredits(amount: Double): Result<Unit> {
+        return try {
+            delay(500)
+            _userWallet.value?.let { wallet ->
+                if (wallet.totalCreditsOwned >= amount) {
+                    _userWallet.value = wallet.copy(
+                        totalCreditsOwned = wallet.totalCreditsOwned - amount,
+                        balance = wallet.balance + (amount * 45.0) // Assuming $45 per credit
+                    )
+                    Result.success(Unit)
+                } else {
+                    Result.failure(Exception("Insufficient credits"))
+                }
+            } ?: Result.failure(Exception("Wallet not found"))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun markSubmissionAsCompleted(submissionId: String): Result<Unit> {
         return try {
             delay(500)

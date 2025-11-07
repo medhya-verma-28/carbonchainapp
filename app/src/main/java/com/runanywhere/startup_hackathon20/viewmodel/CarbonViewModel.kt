@@ -291,6 +291,34 @@ class CarbonViewModel : ViewModel() {
         return repository.getUserSubmissions(username)
     }
 
+    fun buyCarbonCredits(amount: Double) {
+        viewModelScope.launch {
+            val result = repository.buyCarbonCredits(amount)
+            result.fold(
+                onSuccess = {
+                    // Success handled by payment flow
+                },
+                onFailure = { error ->
+                    _uiState.value = UiState.Error(error.message ?: "Purchase failed")
+                }
+            )
+        }
+    }
+
+    fun sellCarbonCredits(amount: Double) {
+        viewModelScope.launch {
+            val result = repository.sellCarbonCredits(amount)
+            result.fold(
+                onSuccess = {
+                    // Success handled by payment flow
+                },
+                onFailure = { error ->
+                    _uiState.value = UiState.Error(error.message ?: "Listing failed")
+                }
+            )
+        }
+    }
+
     fun markSubmissionAsCompleted(submissionId: String) {
         viewModelScope.launch {
             _uiState.value = UiState.Loading
