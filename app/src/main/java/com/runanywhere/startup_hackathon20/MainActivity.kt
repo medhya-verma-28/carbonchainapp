@@ -2029,7 +2029,7 @@ fun BlueCarbonMonitorHomepage(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.6f))
+                        .background(Color.Black.copy(alpha = 0.8f))
                         .clickable(
                             onClick = { showHistoryDrawer = false },
                             indication = null,
@@ -2038,18 +2038,23 @@ fun BlueCarbonMonitorHomepage(
                 )
 
                 // Drawer surface - completely opaque with dark green background
-                Surface(
+                Box(
                     modifier = Modifier
                         .fillMaxHeight()
                         .width(340.dp)
-                        .align(Alignment.CenterStart),
-                    color = Color(0xFF0A2326), // Solid dark green - completely opaque
-                    tonalElevation = 0.dp,
-                    shadowElevation = 8.dp
+                        .align(Alignment.CenterStart)
+                        .background(DarkBackground) // Solid opaque background
                 ) {
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = DarkBackground, // Completely opaque dark background
+                        tonalElevation = 0.dp,
+                        shadowElevation = 16.dp
+                    ) {
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
+                            .background(DarkBackground)
                             .padding(20.dp)
                     ) {
                         // Drawer Header
@@ -2242,8 +2247,9 @@ fun BlueCarbonMonitorHomepage(
                 }
             }
         }
-
-        // Dialogs Section - Above everything else at screen level
+    }
+        
+    // Dialogs Section - Above everything else at screen level
         // Pending Submission Details Dialog
         if (selectedPendingSubmission != null) {
             // Get fresh submission data from the updated list
