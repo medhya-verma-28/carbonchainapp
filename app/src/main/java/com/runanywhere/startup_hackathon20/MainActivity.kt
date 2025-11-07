@@ -600,11 +600,14 @@ fun BlueCarbonMonitorHomepage(
     val uiState by viewModel.uiState.collectAsState()
 
     // Get user's carbon registries for history
+    val userSubmissions by viewModel.userSubmissions.collectAsState()
+    val pendingSubmissions = remember(authState.username, userSubmissions) {
+        derivedStateOf {
+            userSubmissions.filter { it.submitterName == authState.username }
+        }
+    }
     val carbonRegistries = remember(authState.username) {
         derivedStateOf { viewModel.getUserCarbonRegistries() }
-    }
-    val pendingSubmissions = remember(authState.username) {
-        derivedStateOf { viewModel.getUserPendingSubmissions() }
     }
 
     // Show success/error message and reset form if needed
@@ -2244,13 +2247,9 @@ fun BlueCarbonMonitorHomepage(
         // Pending Submission Details Dialog
         if (selectedPendingSubmission != null) {
             // Get fresh submission data from the updated list
-            val freshSubmission =
-                remember(selectedPendingSubmission?.id, pendingSubmissions.value) {
-                    derivedStateOf {
-                        pendingSubmissions.value.find { it.id == selectedPendingSubmission?.id }
-                            ?: selectedPendingSubmission
-                    }
-                }
+            val currentSubmission = pendingSubmissions.value.find { 
+                it.id == selectedPendingSubmission?.id 
+            } ?: selectedPendingSubmission
 
             Dialog(
                 onDismissRequest = { selectedPendingSubmission = null },
@@ -2291,7 +2290,7 @@ fun BlueCarbonMonitorHomepage(
 
                         Spacer(Modifier.height(8.dp))
 
-                        if (freshSubmission.value?.status == SubmissionStatus.PENDING) {
+                        if (currentSubmission?.status == SubmissionStatus.PENDING) {
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -2328,7 +2327,7 @@ fun BlueCarbonMonitorHomepage(
                                     )
                                 }
                             }
-                        } else if (freshSubmission.value?.status == SubmissionStatus.APPROVED) {
+                        } else if (currentSubmission?.status == SubmissionStatus.APPROVED) {
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -2365,7 +2364,7 @@ fun BlueCarbonMonitorHomepage(
                                     )
                                 }
                             }
-                        } else if (freshSubmission.value?.status == SubmissionStatus.REJECTED) {
+                        } else if (currentSubmission?.status == SubmissionStatus.REJECTED) {
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -2400,10 +2399,10 @@ fun BlueCarbonMonitorHomepage(
                                         color = TextSecondary,
                                         textAlign = TextAlign.Center
                                     )
-                                    if (!freshSubmission.value?.notes.isNullOrEmpty()) {
+                                    if (!currentSubmission?.notes.isNullOrEmpty()) {
                                         Spacer(Modifier.height(8.dp))
                                         Text(
-                                            "Reason: ${freshSubmission.value?.notes}",
+                                            "Reason: ${currentSubmission?.notes}",
                                             style = MaterialTheme.typography.bodySmall,
                                             color = TextSecondary,
                                             textAlign = TextAlign.Center
@@ -2426,20 +2425,20 @@ fun BlueCarbonMonitorHomepage(
                                 .padding(16.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            InfoRow("ID", freshSubmission.value?.id?.take(16) + "...")
-                            InfoRow("Location", freshSubmission.value?.location ?: "-")
+                            InfoRow("ID", currentSubmission?.id?.take(16) + "...")
+                            InfoRow("Location", currentSubmission?.location ?: "-")
                             InfoRow(
                                 "Submitted",
-                                freshSubmission.value?.submissionDate?.let { formatDate(it) }
+                                currentSubmission?.submissionDate?.let { formatDate(it) }
                                     ?: "-"
                             )
-                            InfoRow("Status", freshSubmission.value?.status?.name ?: "-")
+                            InfoRow("Status", currentSubmission?.status?.name ?: "-")
                         }
 
-                        if (freshSubmission.value?.imageUrl != null) {
+                        if (currentSubmission?.imageUrl != null) {
                             Spacer(Modifier.height(8.dp))
                             AsyncImage(
-                                model = freshSubmission.value?.imageUrl,
+                                model = currentSubmission?.imageUrl,
                                 contentDescription = "Photo",
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -2452,9 +2451,9 @@ fun BlueCarbonMonitorHomepage(
                         Spacer(Modifier.height(8.dp))
 
                         // Show "Proceed to Blockchain Registry" button if APPROVED
-                        if (freshSubmission.value?.status == SubmissionStatus.APPROVED) {
+                        if (currentSubmission?.status == SubmissionStatus.APPROVED) {
                             // Check if blockchain registry is completed
-                            if (freshSubmission.value?.blockchainRegistryCompleted == true) {
+                            if (currentSubmission?.blockchainRegistryCompleted == true) {
                                 // Show completion message
                                 Box(
                                     modifier = Modifier
@@ -2490,10 +2489,10 @@ fun BlueCarbonMonitorHomepage(
                                             color = TextSecondary,
                                             textAlign = TextAlign.Center
                                         )
-                                        if (freshSubmission.value?.completionDate != null) {
+                                        if (currentSubmission?.completionDate != null) {
                                             Spacer(Modifier.height(8.dp))
                                             Text(
-                                                "Completed: ${formatDate(freshSubmission.value?.completionDate!!)}",
+                                                "Completed: ${formatDate(currentSubmission?.completionDate!!)}",
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = TextSecondary,
                                                 textAlign = TextAlign.Center
@@ -2508,12 +2507,12 @@ fun BlueCarbonMonitorHomepage(
                                     onClick = {
                                         // Convert the approved submission to a CarbonRegistrySubmission
                                         val registrySubmission = CarbonRegistrySubmission(
-                                            id = freshSubmission.value?.id ?: "",
+                                            id = currentSubmission?.id ?: "",
                                             registrationStatus = RegistrationStatus.REGISTERED,
                                             blockNumber = "12,346,678",
-                                            creditAmount = freshSubmission.value?.co2Value
+                                            creditAmount = currentSubmission?.co2Value
                                                 ?: 2.3,
-                                            projectArea = "${freshSubmission.value?.hectaresValue ?: 1.2} hectares",
+                                            projectArea = "${currentSubmission?.hectaresValue ?: 1.2} hectares",
                                             vintageYear = 2023,
                                             verificationDate = "10/10/2023",
                                             transactionHash = "0x7a3f2b2c4a5d4f4b2c3a2b1c5d4f2a1b6c7d8e9f1a2b3c4d5e6f7a8b9c0d1e2f",
@@ -2528,14 +2527,14 @@ fun BlueCarbonMonitorHomepage(
                                                 AuditItem("Blockchain registration complete", true)
                                             ),
                                             registryNotes = "",
-                                            imageUrl = freshSubmission.value?.imageUrl,
-                                            location = freshSubmission.value?.location ?: "",
-                                            coordinates = freshSubmission.value?.coordinates,
-                                            submissionDate = freshSubmission.value?.submissionDate
+                                            imageUrl = currentSubmission?.imageUrl,
+                                            location = currentSubmission?.location ?: "",
+                                            coordinates = currentSubmission?.coordinates,
+                                            submissionDate = currentSubmission?.submissionDate
                                                 ?: System.currentTimeMillis(),
-                                            submitterName = freshSubmission.value?.submitterName
+                                            submitterName = currentSubmission?.submitterName
                                                 ?: "",
-                                            submitterEmail = freshSubmission.value?.submitterEmail
+                                            submitterEmail = currentSubmission?.submitterEmail
                                                 ?: "",
                                             status = SubmissionStatus.APPROVED
                                         )
@@ -2563,7 +2562,7 @@ fun BlueCarbonMonitorHomepage(
                             onClick = { selectedPendingSubmission = null },
                             modifier = Modifier.fillMaxWidth(),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = if (freshSubmission.value?.status == SubmissionStatus.APPROVED)
+                                containerColor = if (currentSubmission?.status == SubmissionStatus.APPROVED)
                                 Color.White.copy(alpha = 0.1f) else PrimaryGreen
                             )
                         ) {
