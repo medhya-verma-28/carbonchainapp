@@ -572,6 +572,9 @@ fun BlueCarbonMonitorHomepage(
     var selectedPendingSubmission by remember { mutableStateOf<UserSubmission?>(null) }
     var selectedApprovedRegistry by remember { mutableStateOf<CarbonRegistrySubmission?>(null) }
 
+    // Filter state for history drawer
+    var historyFilter by remember { mutableStateOf<SubmissionStatus?>(null) }
+
     // Multi-step portal flow
     var showBlockchainRegistryForm by remember { mutableStateOf(false) }
     var showSmartContractsPortal by remember { mutableStateOf(false) }
@@ -1297,18 +1300,83 @@ fun BlueCarbonMonitorHomepage(
 
                         Spacer(Modifier.height(8.dp))
 
-                        Text(
-                            "All Submissions",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = TextSecondary
-                        )
+                        // Filter Buttons Row
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            FilterChip(
+                                selected = historyFilter == null,
+                                onClick = { historyFilter = null },
+                                label = {
+                                    Text(
+                                        "All",
+                                        color = if (historyFilter == null) PrimaryGreen else TextSecondary
+                                    )
+                                }
+                            )
+                            FilterChip(
+                                selected = historyFilter == SubmissionStatus.APPROVED,
+                                onClick = {
+                                    historyFilter =
+                                        if (historyFilter == SubmissionStatus.APPROVED) null else SubmissionStatus.APPROVED
+                                },
+                                label = {
+                                    Text(
+                                        "Approved",
+                                        color = if (historyFilter == SubmissionStatus.APPROVED) PrimaryGreen else TextSecondary
+                                    )
+                                }
+                            )
+                            FilterChip(
+                                selected = historyFilter == SubmissionStatus.PENDING,
+                                onClick = {
+                                    historyFilter =
+                                        if (historyFilter == SubmissionStatus.PENDING) null else SubmissionStatus.PENDING
+                                },
+                                label = {
+                                    Text(
+                                        "Pending",
+                                        color = if (historyFilter == SubmissionStatus.PENDING) AccentCyan else TextSecondary
+                                    )
+                                }
+                            )
+                            FilterChip(
+                                selected = historyFilter == SubmissionStatus.REJECTED,
+                                onClick = {
+                                    historyFilter =
+                                        if (historyFilter == SubmissionStatus.REJECTED) null else SubmissionStatus.REJECTED
+                                },
+                                label = {
+                                    Text(
+                                        "Rejected",
+                                        color = if (historyFilter == SubmissionStatus.REJECTED) Color(
+                                            0xFFEF4444
+                                        ) else TextSecondary
+                                    )
+                                }
+                            )
+                        }
 
                         Spacer(Modifier.height(16.dp))
 
-                        // List of Registry Submissions
-                        val totalSubmissions =
-                            pendingSubmissions.value.size + carbonRegistries.value.size
-                        if (totalSubmissions == 0) {
+                        // List of Registry Submissions with filters applied
+                        val filteredPending =
+                            if (historyFilter == null) pendingSubmissions.value
+                            else pendingSubmissions.value.filter { it.status == historyFilter }
+                        val filteredRegistries =
+                            if (historyFilter == null) carbonRegistries.value
+                            else carbonRegistries.value.filter { registry ->
+                                // Only show "Approved" registry if filter is set to APPROVED, otherwise empty
+                                historyFilter == SubmissionStatus.APPROVED
+                            }
+
+                        val totalFiltered =
+                            filteredPending.size + filteredRegistries.size
+
+                        if (totalFiltered == 0) {
                             Box(
                                 modifier = Modifier.fillMaxSize(),
                                 contentAlignment = Alignment.Center
@@ -1325,7 +1393,11 @@ fun BlueCarbonMonitorHomepage(
                                     )
                                     Spacer(Modifier.height(12.dp))
                                     Text(
-                                        "No submissions yet",
+                                        if (historyFilter == null) "No submissions yet"
+                                        else "No ${
+                                            historyFilter?.name?.lowercase()
+                                                ?.replaceFirstChar { it.uppercase() }
+                                        } submissions found",
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = TextSecondary
                                     )
@@ -1343,8 +1415,8 @@ fun BlueCarbonMonitorHomepage(
                                 verticalArrangement = Arrangement.spacedBy(12.dp),
                                 modifier = Modifier.fillMaxSize()
                             ) {
-                                // Show pending submissions
-                                items(pendingSubmissions.value) { submission ->
+                                // Show filtered pending submissions
+                                items(filteredPending) { submission ->
                                     HistoryItemCard(
                                         id = submission.id,
                                         location = submission.location,
@@ -1361,8 +1433,8 @@ fun BlueCarbonMonitorHomepage(
                                         }
                                     )
                                 }
-                                // Show approved/registered submissions
-                                items(carbonRegistries.value) { registry ->
+                                // Show filtered approved/registered submissions only if filter allows
+                                items(filteredRegistries) { registry ->
                                     HistoryItemCard(
                                         id = registry.id,
                                         location = registry.location,
@@ -1588,54 +1660,110 @@ fun BlueCarbonMonitorHomepage(
 
                         // Show "Proceed to Blockchain Registry" button if APPROVED
                         if (selectedPendingSubmission?.status == SubmissionStatus.APPROVED) {
-                            Button(
-                                onClick = {
-                                    // Convert the approved submission to a CarbonRegistrySubmission
-                                    val registrySubmission = CarbonRegistrySubmission(
-                                        id = selectedPendingSubmission?.id ?: "",
-                                        registrationStatus = RegistrationStatus.REGISTERED,
-                                        blockNumber = "12,346,678",
-                                        creditAmount = selectedPendingSubmission?.co2Value ?: 2.3,
-                                        projectArea = "${selectedPendingSubmission?.hectaresValue ?: 1.2} hectares",
-                                        vintageYear = 2023,
-                                        verificationDate = "10/10/2023",
-                                        transactionHash = "0x7a3f2b2c4a5d4f4b2c3a2b1c5d4f2a1b6c7d8e9f1a2b3c4d5e6f7a8b9c0d1e2f",
-                                        contractAddress = "0xabc123def456",
-                                        network = "BNB",
-                                        tokenStandard = "ERC-20",
-                                        auditTrail = listOf(
-                                            AuditItem("Initial assessment completed", true),
-                                            AuditItem("Scientific analysis verified", true),
-                                            AuditItem("Expert verification approved", true),
-                                            AuditItem("Third-party compliance confirmed", true),
-                                            AuditItem("Blockchain registration complete", true)
-                                        ),
-                                        registryNotes = "",
-                                        imageUrl = selectedPendingSubmission?.imageUrl,
-                                        location = selectedPendingSubmission?.location ?: "",
-                                        coordinates = selectedPendingSubmission?.coordinates,
-                                        submissionDate = selectedPendingSubmission?.submissionDate
-                                            ?: System.currentTimeMillis(),
-                                        submitterName = selectedPendingSubmission?.submitterName
-                                            ?: "",
-                                        submitterEmail = selectedPendingSubmission?.submitterEmail
-                                            ?: "",
-                                        status = SubmissionStatus.APPROVED
+                            // Check if blockchain registry is completed
+                            if (selectedPendingSubmission?.blockchainRegistryCompleted == true) {
+                                // Show completion message
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(
+                                            PrimaryGreen.copy(alpha = 0.15f),
+                                            RoundedCornerShape(12.dp)
+                                        )
+                                        .padding(16.dp)
+                                ) {
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Check,
+                                            contentDescription = null,
+                                            tint = PrimaryGreen,
+                                            modifier = Modifier.size(48.dp)
+                                        )
+                                        Spacer(Modifier.height(12.dp))
+                                        Text(
+                                            "✅ Blockchain Registry Completed!",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = TextPrimary,
+                                            textAlign = TextAlign.Center
+                                        )
+                                        Spacer(Modifier.height(8.dp))
+                                        Text(
+                                            "Your carbon credit has been successfully registered on the blockchain with all verification details.",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = TextSecondary,
+                                            textAlign = TextAlign.Center
+                                        )
+                                        if (selectedPendingSubmission?.completionDate != null) {
+                                            Spacer(Modifier.height(8.dp))
+                                            Text(
+                                                "Completed: ${formatDate(selectedPendingSubmission?.completionDate!!)}",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = TextSecondary,
+                                                textAlign = TextAlign.Center
+                                            )
+                                        }
+                                    }
+                                }
+                                Spacer(Modifier.height(8.dp))
+                            } else {
+                                // Show "Proceed to Blockchain Registry" button
+                                Button(
+                                    onClick = {
+                                        // Convert the approved submission to a CarbonRegistrySubmission
+                                        val registrySubmission = CarbonRegistrySubmission(
+                                            id = selectedPendingSubmission?.id ?: "",
+                                            registrationStatus = RegistrationStatus.REGISTERED,
+                                            blockNumber = "12,346,678",
+                                            creditAmount = selectedPendingSubmission?.co2Value
+                                                ?: 2.3,
+                                            projectArea = "${selectedPendingSubmission?.hectaresValue ?: 1.2} hectares",
+                                            vintageYear = 2023,
+                                            verificationDate = "10/10/2023",
+                                            transactionHash = "0x7a3f2b2c4a5d4f4b2c3a2b1c5d4f2a1b6c7d8e9f1a2b3c4d5e6f7a8b9c0d1e2f",
+                                            contractAddress = "0xabc123def456",
+                                            network = "BNB",
+                                            tokenStandard = "ERC-20",
+                                            auditTrail = listOf(
+                                                AuditItem("Initial assessment completed", true),
+                                                AuditItem("Scientific analysis verified", true),
+                                                AuditItem("Expert verification approved", true),
+                                                AuditItem("Third-party compliance confirmed", true),
+                                                AuditItem("Blockchain registration complete", true)
+                                            ),
+                                            registryNotes = "",
+                                            imageUrl = selectedPendingSubmission?.imageUrl,
+                                            location = selectedPendingSubmission?.location ?: "",
+                                            coordinates = selectedPendingSubmission?.coordinates,
+                                            submissionDate = selectedPendingSubmission?.submissionDate
+                                                ?: System.currentTimeMillis(),
+                                            submitterName = selectedPendingSubmission?.submitterName
+                                                ?: "",
+                                            submitterEmail = selectedPendingSubmission?.submitterEmail
+                                                ?: "",
+                                            status = SubmissionStatus.APPROVED
+                                        )
+                                        selectedApprovedRegistry = registrySubmission
+                                        registryFormData = BlockchainRegistryForm()
+                                        selectedPendingSubmission = null
+                                        showBlockchainRegistryForm = true
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Icon(Icons.Default.ArrowForward, null)
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(
+                                        "Proceed to Blockchain Registry",
+                                        fontWeight = FontWeight.Bold
                                     )
-                                    selectedApprovedRegistry = registrySubmission
-                                    registryFormData = BlockchainRegistryForm()
-                                    selectedPendingSubmission = null
-                                    showBlockchainRegistryForm = true
-                                },
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Icon(Icons.Default.ArrowForward, null)
-                                Spacer(Modifier.width(8.dp))
-                                Text("Proceed to Blockchain Registry", fontWeight = FontWeight.Bold)
+                                }
+                                Spacer(Modifier.height(8.dp))
                             }
-                            Spacer(Modifier.height(8.dp))
                         }
 
                         Button(
@@ -2381,6 +2509,11 @@ fun BlueCarbonMonitorHomepage(
 
                             Button(
                                 onClick = {
+                                    // Mark submission as completed before closing
+                                    selectedApprovedRegistry?.id?.let { submissionId ->
+                                        viewModel.markSubmissionAsCompleted(submissionId)
+                                    }
+                                    // Show success message (handled by UiState.Success in LaunchedEffect above)
                                     showCarbonMarketplace = false
                                     marketplaceData = null
                                     selectedApprovedRegistry = null

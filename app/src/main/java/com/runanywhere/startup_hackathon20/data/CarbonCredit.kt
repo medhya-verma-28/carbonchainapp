@@ -176,7 +176,9 @@ data class UserSubmission(
     val coordinatesWithinRange: Boolean,
     val submitterName: String,
     val submitterEmail: String,
-    val notes: String = ""
+    val notes: String = "",
+    val blockchainRegistryCompleted: Boolean = false,
+    val completionDate: Long? = null
 ) : Parcelable
 
 @Parcelize

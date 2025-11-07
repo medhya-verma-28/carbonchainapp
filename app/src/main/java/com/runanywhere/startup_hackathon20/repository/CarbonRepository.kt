@@ -567,4 +567,24 @@ class CarbonRepository(
     fun getCarbonRegistrySubmissions(username: String): List<CarbonRegistrySubmission> {
         return _carbonRegistrySubmissions.value.filter { it.submitterName == username }
     }
+
+    suspend fun markSubmissionAsCompleted(submissionId: String): Result<Unit> {
+        return try {
+            delay(500)
+            val updatedSubmissions = _userSubmissions.value.map { submission ->
+                if (submission.id == submissionId) {
+                    submission.copy(
+                        blockchainRegistryCompleted = true,
+                        completionDate = System.currentTimeMillis()
+                    )
+                } else {
+                    submission
+                }
+            }
+            _userSubmissions.value = updatedSubmissions
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }

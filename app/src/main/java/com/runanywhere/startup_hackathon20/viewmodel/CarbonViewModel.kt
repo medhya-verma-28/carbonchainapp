@@ -290,6 +290,23 @@ class CarbonViewModel : ViewModel() {
         val username = authState.value.username ?: return emptyList()
         return repository.getUserSubmissions(username)
     }
+
+    fun markSubmissionAsCompleted(submissionId: String) {
+        viewModelScope.launch {
+            _uiState.value = UiState.Loading
+            val result = repository.markSubmissionAsCompleted(submissionId)
+            result.fold(
+                onSuccess = {
+                    _uiState.value = UiState.Success(
+                        "🎉 Blockchain Registry Completed!\n\nYour carbon credit has been successfully registered on the blockchain with all verification details."
+                    )
+                },
+                onFailure = { error ->
+                    _uiState.value = UiState.Error(error.message ?: "Failed to mark as completed")
+                }
+            )
+        }
+    }
 }
 
 sealed class UiState {
