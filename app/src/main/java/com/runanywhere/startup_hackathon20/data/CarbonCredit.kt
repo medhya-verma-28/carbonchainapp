@@ -303,3 +303,63 @@ data class MarketTransaction(
     val price: Double,
     val date: String
 ) : Parcelable
+
+@Parcelize
+data class ImpactDashboardData(
+    val carbonReduced: Double = 2.27, // in tonnes
+    val marketValue: Double = 117.0, // in dollars
+    val monitoringPeriod: String = "M1",
+    val monitoringDate: String = "04/04/2023",
+    val carbonSequestered: Double = 150.0, // in kg
+    val co2eReduction: Double = 2391.0, // in kg
+    val peopleImpacted: Int = 516020,
+    val treesPlanted: Int = 8016,
+    val progressIndicators: List<ProgressIndicator> = listOf(
+        ProgressIndicator("Monitoring Progress", 78),
+        ProgressIndicator("Stakeholder Engagement", 65),
+        ProgressIndicator("Compliance Tracking", 82),
+        ProgressIndicator("Biodiversity", 11)
+    ),
+    val environmentalHealth: List<EnvironmentalMetric> = listOf(
+        EnvironmentalMetric("Water Quality", "Sustainable"),
+        EnvironmentalMetric("Habitat Health", "Good"),
+        EnvironmentalMetric("Service Life", "Recovering")
+    ),
+    val communityBenefits: CommunityBenefits = CommunityBenefits(
+        familiesToSupported = 156,
+        jobsCreated = 12
+    ),
+    val monitoringDetails: MonitoringDetails = MonitoringDetails(
+        durationOfProject = "Active",
+        nextMonitoring = "12 Months",
+        lastReported = "Monthly",
+        currentProjectMembership = "Active"
+    ),
+    val sustainabilityMessage: String = "Your latest carbon project is then helping livelihoods and is making a tangible impact on climate change. Continue monitoring via satellite imagery and/or evidence for ongoing impact tracking."
+) : Parcelable
+
+@Parcelize
+data class ProgressIndicator(
+    val name: String,
+    val percentage: Int
+) : Parcelable
+
+@Parcelize
+data class EnvironmentalMetric(
+    val name: String,
+    val status: String
+) : Parcelable
+
+@Parcelize
+data class CommunityBenefits(
+    val familiesToSupported: Int,
+    val jobsCreated: Int
+) : Parcelable
+
+@Parcelize
+data class MonitoringDetails(
+    val durationOfProject: String,
+    val nextMonitoring: String,
+    val lastReported: String,
+    val currentProjectMembership: String
+) : Parcelable

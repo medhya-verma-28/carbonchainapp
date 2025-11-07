@@ -60,6 +60,7 @@ import com.runanywhere.startup_hackathon20.ui.theme.Startup_hackathon20Theme
 import com.runanywhere.startup_hackathon20.ui.AdminVerificationScreen
 import com.runanywhere.startup_hackathon20.viewmodel.CarbonViewModel
 import com.runanywhere.startup_hackathon20.viewmodel.UiState
+import kotlinx.coroutines.launch
 import java.io.File
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
@@ -579,9 +580,16 @@ fun BlueCarbonMonitorHomepage(
     var showBlockchainRegistryForm by remember { mutableStateOf(false) }
     var showSmartContractsPortal by remember { mutableStateOf(false) }
     var showCarbonMarketplace by remember { mutableStateOf(false) }
+    var showImpactDashboard by remember { mutableStateOf(false) }
     var registryFormData by remember { mutableStateOf(BlockchainRegistryForm()) }
     var smartContractData by remember { mutableStateOf<SmartContractData?>(null) }
     var marketplaceData by remember { mutableStateOf<CarbonMarketplace?>(null) }
+    var impactDashboardData by remember { mutableStateOf<ImpactDashboardData?>(null) }
+
+    // Payment processing state
+    var isProcessingPayment by remember { mutableStateOf(false) }
+    var paymentProgress by remember { mutableStateOf(0f) }
+    var paymentStatus by remember { mutableStateOf("") }
 
     // For gallery picker
     var galleryPhotoUri by remember { mutableStateOf<Uri?>(null) }
@@ -743,6 +751,782 @@ fun BlueCarbonMonitorHomepage(
                 )
             )
     ) {
+        // Impact Dashboard Portal (screen-level)
+        if (showImpactDashboard && impactDashboardData != null) {
+            Dialog(
+                onDismissRequest = {
+                    // Mark as completed and close
+                    selectedApprovedRegistry?.id?.let { submissionId ->
+                        viewModel.markSubmissionAsCompleted(submissionId)
+                    }
+                    showImpactDashboard = false
+                    impactDashboardData = null
+                    selectedApprovedRegistry = null
+                },
+                properties = DialogProperties(usePlatformDefaultWidth = false)
+            ) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    Color(0xFF07151A),
+                                    Color(0xFF0A2326),
+                                    Color(0xFF0C3339),
+                                    Color(0xFF0A2832)
+                                )
+                            )
+                        )
+                ) {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        // Animated gradient blobs
+                        Box(
+                            modifier = Modifier
+                                .size(400.dp)
+                                .offset(x = (-100).dp, y = (-150).dp)
+                                .background(PrimaryTeal.copy(alpha = 0.3f), CircleShape)
+                                .blur(100.dp)
+                        )
+                        Box(
+                            modifier = Modifier
+                                .size(350.dp)
+                                .align(Alignment.TopEnd)
+                                .offset(x = 100.dp, y = 50.dp)
+                                .background(PrimaryBlue.copy(alpha = 0.3f), CircleShape)
+                                .blur(100.dp)
+                        )
+                        Box(
+                            modifier = Modifier
+                                .size(300.dp)
+                                .align(Alignment.BottomStart)
+                                .offset(x = (-50).dp, y = 100.dp)
+                                .background(PrimaryGreen.copy(alpha = 0.2f), CircleShape)
+                                .blur(100.dp)
+                        )
+
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .verticalScroll(rememberScrollState())
+                                .padding(24.dp)
+                        ) {
+                            // Header
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column {
+                                    Text(
+                                        "Impact Dashboard",
+                                        style = MaterialTheme.typography.headlineMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = TextPrimary
+                                    )
+                                    Text(
+                                        "Global Blue Carbon Environmental Monitoring",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = TextSecondary
+                                    )
+                                }
+                                IconButton(onClick = {
+                                    selectedApprovedRegistry?.id?.let { submissionId ->
+                                        viewModel.markSubmissionAsCompleted(submissionId)
+                                    }
+                                    showImpactDashboard = false
+                                    impactDashboardData = null
+                                    selectedApprovedRegistry = null
+                                }) {
+                                    Icon(Icons.Default.Close, "Close", tint = TextPrimary)
+                                }
+                            }
+
+                            Spacer(Modifier.height(24.dp))
+
+                            // Project Overview Cards
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .glassEffect()
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(16.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Text(
+                                            "${impactDashboardData!!.carbonReduced}",
+                                            style = MaterialTheme.typography.headlineMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = PrimaryGreen
+                                        )
+                                        Text(
+                                            "Carbon Reduced (tCO₂)",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = TextSecondary,
+                                            textAlign = TextAlign.Center
+                                        )
+                                    }
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .glassEffect()
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(16.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Text(
+                                            "${formatNumber(impactDashboardData!!.marketValue)}",
+                                            style = MaterialTheme.typography.headlineMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = AccentCyan
+                                        )
+                                        Text(
+                                            "Market Value",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = TextSecondary,
+                                            textAlign = TextAlign.Center
+                                        )
+                                    }
+                                }
+                            }
+
+                            Spacer(Modifier.height(16.dp))
+
+                            // Monitoring Period
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .glassEffect()
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Column {
+                                        Text(
+                                            "Period: ${impactDashboardData!!.monitoringPeriod}",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            color = TextPrimary
+                                        )
+                                        Text(
+                                            "Monitoring Period",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = TextSecondary
+                                        )
+                                    }
+                                    Column(horizontalAlignment = Alignment.End) {
+                                        Text(
+                                            impactDashboardData!!.monitoringDate,
+                                            style = MaterialTheme.typography.titleMedium,
+                                            color = TextPrimary
+                                        )
+                                        Text(
+                                            "Active",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = PrimaryGreen
+                                        )
+                                    }
+                                }
+                            }
+
+                            Spacer(Modifier.height(16.dp))
+
+                            // Monitoring Method Tabs (Static for now)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Surface(
+                                    modifier = Modifier.weight(1f),
+                                    color = PrimaryGreen,
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Text(
+                                        "M1",
+                                        modifier = Modifier.padding(8.dp),
+                                        textAlign = TextAlign.Center,
+                                        color = Color.White,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                Surface(
+                                    modifier = Modifier.weight(1f),
+                                    color = Color.White.copy(alpha = 0.1f),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Text(
+                                        "M2",
+                                        modifier = Modifier.padding(8.dp),
+                                        textAlign = TextAlign.Center,
+                                        color = TextSecondary
+                                    )
+                                }
+                                Surface(
+                                    modifier = Modifier.weight(1f),
+                                    color = Color.White.copy(alpha = 0.1f),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Text(
+                                        "M3",
+                                        modifier = Modifier.padding(8.dp),
+                                        textAlign = TextAlign.Center,
+                                        color = TextSecondary
+                                    )
+                                }
+                            }
+
+                            Spacer(Modifier.height(16.dp))
+
+                            // Impact Metrics
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .glassEffect()
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(12.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Star,
+                                            contentDescription = null,
+                                            tint = AccentCyan,
+                                            modifier = Modifier.size(32.dp)
+                                        )
+                                        Spacer(Modifier.height(4.dp))
+                                        Text(
+                                            "${formatNumber(impactDashboardData!!.carbonSequestered)}kg",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = TextPrimary
+                                        )
+                                        Text(
+                                            "Carbon Sequestered",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = TextSecondary,
+                                            textAlign = TextAlign.Center
+                                        )
+                                    }
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .glassEffect()
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(12.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Check,
+                                            contentDescription = null,
+                                            tint = PrimaryGreen,
+                                            modifier = Modifier.size(32.dp)
+                                        )
+                                        Spacer(Modifier.height(4.dp))
+                                        Text(
+                                            "${formatNumber(impactDashboardData!!.co2eReduction)}kg",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = TextPrimary
+                                        )
+                                        Text(
+                                            "CO2e Reduction",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = TextSecondary,
+                                            textAlign = TextAlign.Center
+                                        )
+                                    }
+                                }
+                            }
+
+                            Spacer(Modifier.height(12.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .glassEffect()
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(12.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Person,
+                                            contentDescription = null,
+                                            tint = AccentEmerald,
+                                            modifier = Modifier.size(32.dp)
+                                        )
+                                        Spacer(Modifier.height(4.dp))
+                                        Text(
+                                            "${formatNumber(impactDashboardData!!.peopleImpacted.toDouble())}",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = TextPrimary
+                                        )
+                                        Text(
+                                            "People Impacted",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = TextSecondary,
+                                            textAlign = TextAlign.Center
+                                        )
+                                    }
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .glassEffect()
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(12.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Face,
+                                            contentDescription = null,
+                                            tint = PrimaryTeal,
+                                            modifier = Modifier.size(32.dp)
+                                        )
+                                        Spacer(Modifier.height(4.dp))
+                                        Text(
+                                            "${impactDashboardData!!.treesPlanted}/100",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = TextPrimary
+                                        )
+                                        Text(
+                                            "Trees Planted",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = TextSecondary,
+                                            textAlign = TextAlign.Center
+                                        )
+                                    }
+                                }
+                            }
+
+                            Spacer(Modifier.height(16.dp))
+
+                            // Progress Indicators
+                            Text(
+                                "Progress Indicators",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
+                            Spacer(Modifier.height(12.dp))
+
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .glassEffect()
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    impactDashboardData!!.progressIndicators.forEach { indicator ->
+                                        Column {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                Text(
+                                                    indicator.name,
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    color = TextPrimary
+                                                )
+                                                Text(
+                                                    "${indicator.percentage}%",
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = PrimaryGreen
+                                                )
+                                            }
+                                            Spacer(Modifier.height(4.dp))
+                                            LinearProgressIndicator(
+                                                progress = indicator.percentage / 100f,
+                                                modifier = Modifier.fillMaxWidth(),
+                                                color = PrimaryGreen,
+                                                trackColor = Color.White.copy(alpha = 0.1f)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            Spacer(Modifier.height(16.dp))
+
+                            // Environmental Health
+                            Text(
+                                "Environmental Health",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
+                            Spacer(Modifier.height(8.dp))
+
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .glassEffect()
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    impactDashboardData!!.environmentalHealth.forEach { metric ->
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                            ) {
+                                                Icon(
+                                                    Icons.Default.Star,
+                                                    contentDescription = null,
+                                                    tint = when (metric.status) {
+                                                        "Sustainable" -> PrimaryGreen
+                                                        "Good" -> AccentCyan
+                                                        "Recovering" -> Color(0xFFFF9800)
+                                                        else -> TextSecondary
+                                                    },
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                                Text(
+                                                    metric.name,
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    color = TextPrimary
+                                                )
+                                            }
+                                            Surface(
+                                                color = when (metric.status) {
+                                                    "Sustainable" -> PrimaryGreen.copy(alpha = 0.2f)
+                                                    "Good" -> AccentCyan.copy(alpha = 0.2f)
+                                                    "Recovering" -> Color(0xFFFF9800).copy(alpha = 0.2f)
+                                                    else -> Color.Gray.copy(alpha = 0.2f)
+                                                },
+                                                shape = RoundedCornerShape(8.dp)
+                                            ) {
+                                                Text(
+                                                    metric.status,
+                                                    modifier = Modifier.padding(
+                                                        horizontal = 8.dp,
+                                                        vertical = 4.dp
+                                                    ),
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = when (metric.status) {
+                                                        "Sustainable" -> PrimaryGreen
+                                                        "Good" -> AccentCyan
+                                                        "Recovering" -> Color(0xFFFF9800)
+                                                        else -> TextSecondary
+                                                    },
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            Spacer(Modifier.height(16.dp))
+
+                            // Community Benefits
+                            Text(
+                                "Community Benefits",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
+                            Spacer(Modifier.height(8.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .glassEffect()
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(16.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Text(
+                                            "${impactDashboardData!!.communityBenefits.familiesToSupported}",
+                                            style = MaterialTheme.typography.headlineMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = AccentEmerald
+                                        )
+                                        Text(
+                                            "Families Supported",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = TextSecondary,
+                                            textAlign = TextAlign.Center
+                                        )
+                                    }
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .glassEffect()
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(16.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Text(
+                                            "${impactDashboardData!!.communityBenefits.jobsCreated}",
+                                            style = MaterialTheme.typography.headlineMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = PrimaryTeal
+                                        )
+                                        Text(
+                                            "Jobs Created",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = TextSecondary,
+                                            textAlign = TextAlign.Center
+                                        )
+                                    }
+                                }
+                            }
+
+                            Spacer(Modifier.height(16.dp))
+
+                            // Monitoring Details
+                            Text(
+                                "Monitoring Details",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
+                            Spacer(Modifier.height(8.dp))
+
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .glassEffect()
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(
+                                            "Duration of Project",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = TextSecondary
+                                        )
+                                        Text(
+                                            impactDashboardData!!.monitoringDetails.durationOfProject,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = PrimaryGreen
+                                        )
+                                    }
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(
+                                            "Next Monitoring",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = TextSecondary
+                                        )
+                                        Text(
+                                            impactDashboardData!!.monitoringDetails.nextMonitoring,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = TextPrimary
+                                        )
+                                    }
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(
+                                            "Last Reported",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = TextSecondary
+                                        )
+                                        Text(
+                                            impactDashboardData!!.monitoringDetails.lastReported,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = TextPrimary
+                                        )
+                                    }
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(
+                                            "Current Project Membership",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = TextSecondary
+                                        )
+                                        Text(
+                                            impactDashboardData!!.monitoringDetails.currentProjectMembership,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = PrimaryGreen
+                                        )
+                                    }
+                                }
+                            }
+
+                            Spacer(Modifier.height(16.dp))
+
+                            // Sustainability Message
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(
+                                        AccentEmerald.copy(alpha = 0.15f),
+                                        RoundedCornerShape(12.dp)
+                                    )
+                                    .padding(16.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.Top,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.Star,
+                                        contentDescription = null,
+                                        tint = AccentEmerald,
+                                        modifier = Modifier.size(32.dp)
+                                    )
+                                    Column {
+                                        Text(
+                                            "Project Sustainability Developed!",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = AccentEmerald
+                                        )
+                                        Spacer(Modifier.height(8.dp))
+                                        Text(
+                                            impactDashboardData!!.sustainabilityMessage,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = TextPrimary
+                                        )
+                                    }
+                                }
+                            }
+
+                            Spacer(Modifier.height(24.dp))
+
+                            // Action Buttons
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Button(
+                                    onClick = {
+                                        Toast.makeText(
+                                            context,
+                                            "View Detailed Analysis feature coming soon!",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    },
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(56.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Icon(Icons.Default.Info, null)
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(
+                                        "View Detailed Analysis",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+
+                                Button(
+                                    onClick = {
+                                        Toast.makeText(
+                                            context,
+                                            "Start New Monitoring Project feature coming soon!",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    },
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(56.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = AccentEmerald),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Icon(Icons.Default.Add, null)
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(
+                                        "Start New Monitoring Project",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+                            }
+
+                            Spacer(Modifier.height(16.dp))
+
+                            // Close Button
+                            Button(
+                                onClick = {
+                                    // Mark as completed and close
+                                    selectedApprovedRegistry?.id?.let { submissionId ->
+                                        viewModel.markSubmissionAsCompleted(submissionId)
+                                    }
+                                    showImpactDashboard = false
+                                    impactDashboardData = null
+                                    selectedApprovedRegistry = null
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(56.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color.White.copy(alpha = 0.1f)
+                                ),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Text(
+                                    "Complete & Close",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextPrimary
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         // Main Content Area and top bar - BELOW History Drawer
         Column(
             modifier = Modifier.fillMaxSize()
@@ -2454,18 +3238,60 @@ fun BlueCarbonMonitorHomepage(
                                 Button(
                                     onClick = {
                                         val amount = 10.0
-                                        Toast.makeText(
-                                            context,
-                                            "Initiating payment for $amount carbon credits",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-                                        // TODO: Implement Razorpay SDK integration
+                                        isProcessingPayment = true
+                                        paymentProgress = 0f
+                                        paymentStatus = "Initializing payment..."
+
+                                        // Simulate Razorpay payment flow with progress updates
+                                        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
+                                            // Step 1: Initialize
+                                            kotlinx.coroutines.delay(500)
+                                            paymentProgress = 0.2f
+                                            paymentStatus = "Connecting to payment gateway..."
+
+                                            // Step 2: Gateway connection
+                                            kotlinx.coroutines.delay(800)
+                                            paymentProgress = 0.4f
+                                            paymentStatus = "Processing payment..."
+
+                                            // Step 3: Payment verification
+                                            kotlinx.coroutines.delay(1000)
+                                            paymentProgress = 0.7f
+                                            paymentStatus = "Verifying transaction..."
+
+                                            // Step 4: Blockchain recording
+                                            kotlinx.coroutines.delay(800)
+                                            paymentProgress = 0.9f
+                                            paymentStatus = "Recording on blockchain..."
+
+                                            // Step 5: Complete
+                                            kotlinx.coroutines.delay(500)
+                                            paymentProgress = 1.0f
+                                            paymentStatus = "Payment successful!"
+
+                                            kotlinx.coroutines.delay(1000)
+                                            isProcessingPayment = false
+                                            paymentProgress = 0f
+                                            paymentStatus = ""
+
+                                            Toast.makeText(
+                                                context,
+                                                "✓ Successfully purchased $amount tCO₂ credits",
+                                                Toast.LENGTH_LONG
+                                            ).show()
+
+                                            // Transition to Impact Dashboard
+                                            impactDashboardData = ImpactDashboardData()
+                                            showImpactDashboard = true
+                                            showCarbonMarketplace = false
+                                        }
                                     },
                                     modifier = Modifier
                                         .weight(1f)
                                         .height(56.dp),
                                     colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen),
-                                    shape = RoundedCornerShape(12.dp)
+                                    shape = RoundedCornerShape(12.dp),
+                                    enabled = !isProcessingPayment
                                 ) {
                                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                         Icon(Icons.Default.ShoppingCart, null)
@@ -2481,17 +3307,51 @@ fun BlueCarbonMonitorHomepage(
                                 Button(
                                     onClick = {
                                         val amount = 5.0
-                                        Toast.makeText(
-                                            context,
-                                            "Listing $amount carbon credits for sale",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
+                                        isProcessingPayment = true
+                                        paymentProgress = 0f
+                                        paymentStatus = "Initializing sell order..."
+
+                                        // Simulate sell payment flow with progress updates
+                                        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main)
+                                            .launch {
+                                                // Step 1: Initialize
+                                                kotlinx.coroutines.delay(500)
+                                                paymentProgress = 0.2f
+                                                paymentStatus = "Creating marketplace listing..."
+
+                                                // Step 2: Verification
+                                                kotlinx.coroutines.delay(800)
+                                                paymentProgress = 0.5f
+                                                paymentStatus = "Verifying credit ownership..."
+
+                                                // Step 3: Blockchain update
+                                                kotlinx.coroutines.delay(1000)
+                                                paymentProgress = 0.8f
+                                                paymentStatus = "Updating blockchain..."
+
+                                                // Step 4: Complete
+                                                kotlinx.coroutines.delay(700)
+                                                paymentProgress = 1.0f
+                                                paymentStatus = "Listing successful!"
+
+                                                kotlinx.coroutines.delay(1000)
+                                                isProcessingPayment = false
+                                                paymentProgress = 0f
+                                                paymentStatus = ""
+
+                                                Toast.makeText(
+                                                    context,
+                                                    "✓ Successfully listed $amount tCO₂ credits for sale",
+                                                    Toast.LENGTH_LONG
+                                                ).show()
+                                            }
                                     },
                                     modifier = Modifier
                                         .weight(1f)
                                         .height(56.dp),
                                     colors = ButtonDefaults.buttonColors(containerColor = AccentCyan),
-                                    shape = RoundedCornerShape(12.dp)
+                                    shape = RoundedCornerShape(12.dp),
+                                    enabled = !isProcessingPayment
                                 ) {
                                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                         Icon(Icons.Default.Star, null)
@@ -2507,31 +3367,65 @@ fun BlueCarbonMonitorHomepage(
 
                             Spacer(Modifier.height(16.dp))
 
-                            Button(
-                                onClick = {
-                                    // Mark submission as completed before closing
-                                    selectedApprovedRegistry?.id?.let { submissionId ->
-                                        viewModel.markSubmissionAsCompleted(submissionId)
-                                    }
-                                    // Show success message (handled by UiState.Success in LaunchedEffect above)
-                                    showCarbonMarketplace = false
-                                    marketplaceData = null
-                                    selectedApprovedRegistry = null
-                                },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(56.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color.White.copy(alpha = 0.1f)
-                                ),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Text(
-                                    "Close Marketplace",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = TextPrimary
-                                )
+                            // Payment Progress / Impact Dashboard Button
+                            if (isProcessingPayment) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .glassEffect()
+                                        .padding(12.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(
+                                        "Payment Processing",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = PrimaryGreen
+                                    )
+                                    Spacer(Modifier.height(8.dp))
+                                    LinearProgressIndicator(
+                                        progress = paymentProgress,
+                                        modifier = Modifier.fillMaxWidth(),
+                                        color = PrimaryGreen
+                                    )
+                                    Spacer(Modifier.height(8.dp))
+                                    Text(
+                                        paymentStatus,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = TextSecondary
+                                    )
+                                }
+                            } else {
+                                Button(
+                                    onClick = {
+                                        // Mark submission as completed before closing
+                                        selectedApprovedRegistry?.id?.let { submissionId ->
+                                            viewModel.markSubmissionAsCompleted(submissionId)
+                                        }
+                                        // Transition to Impact Dashboard
+                                        impactDashboardData = ImpactDashboardData()
+                                        showImpactDashboard = true
+                                        showCarbonMarketplace = false
+                                        marketplaceData = null
+                                        selectedApprovedRegistry = null
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(56.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = AccentEmerald
+                                    ),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Icon(Icons.Default.Star, null)
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(
+                                        "Go to Impact Dashboard",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = TextPrimary
+                                    )
+                                }
                             }
                         }
                     }
