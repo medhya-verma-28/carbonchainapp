@@ -2029,7 +2029,7 @@ fun BlueCarbonMonitorHomepage(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.8f))
+                        .background(Color.Black.copy(alpha = 0.9f))
                         .clickable(
                             onClick = { showHistoryDrawer = false },
                             indication = null,
@@ -2043,18 +2043,19 @@ fun BlueCarbonMonitorHomepage(
                         .fillMaxHeight()
                         .width(340.dp)
                         .align(Alignment.CenterStart)
-                        .background(DarkBackground) // Solid opaque background
+                        .background(Color.Black) // First layer: solid black
+                        .background(DarkBackground) // Second layer: solid dark background
                 ) {
                     Surface(
                         modifier = Modifier.fillMaxSize(),
                         color = DarkBackground, // Completely opaque dark background
                         tonalElevation = 0.dp,
-                        shadowElevation = 16.dp
+                        shadowElevation = 0.dp
                     ) {
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(DarkBackground)
+                            .background(DarkBackground) // Third layer inside column
                             .padding(20.dp)
                     ) {
                         // Drawer Header
