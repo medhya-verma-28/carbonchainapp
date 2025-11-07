@@ -1463,6 +1463,43 @@ fun BlueCarbonMonitorHomepage(
                                     )
                                 }
                             }
+                        } else if (selectedPendingSubmission?.status == SubmissionStatus.APPROVED) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(
+                                        PrimaryGreen.copy(alpha = 0.15f),
+                                        RoundedCornerShape(12.dp)
+                                    )
+                                    .padding(16.dp)
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Icon(
+                                        Icons.Default.Check,
+                                        contentDescription = null,
+                                        tint = PrimaryGreen,
+                                        modifier = Modifier.size(48.dp)
+                                    )
+                                    Spacer(Modifier.height(12.dp))
+                                    Text(
+                                        "✅ Submission Approved!",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = TextPrimary,
+                                        textAlign = TextAlign.Center
+                                    )
+                                    Spacer(Modifier.height(8.dp))
+                                    Text(
+                                        "Congratulations! Your carbon registry submission has been approved by the admin. You can now proceed with blockchain registration.",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = TextSecondary,
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+                            }
                         } else if (selectedPendingSubmission?.status == SubmissionStatus.REJECTED) {
                             Box(
                                 modifier = Modifier
@@ -1549,10 +1586,65 @@ fun BlueCarbonMonitorHomepage(
 
                         Spacer(Modifier.height(8.dp))
 
+                        // Show "Proceed to Blockchain Registry" button if APPROVED
+                        if (selectedPendingSubmission?.status == SubmissionStatus.APPROVED) {
+                            Button(
+                                onClick = {
+                                    // Convert the approved submission to a CarbonRegistrySubmission
+                                    val registrySubmission = CarbonRegistrySubmission(
+                                        id = selectedPendingSubmission?.id ?: "",
+                                        registrationStatus = RegistrationStatus.REGISTERED,
+                                        blockNumber = "12,346,678",
+                                        creditAmount = selectedPendingSubmission?.co2Value ?: 2.3,
+                                        projectArea = "${selectedPendingSubmission?.hectaresValue ?: 1.2} hectares",
+                                        vintageYear = 2023,
+                                        verificationDate = "10/10/2023",
+                                        transactionHash = "0x7a3f2b2c4a5d4f4b2c3a2b1c5d4f2a1b6c7d8e9f1a2b3c4d5e6f7a8b9c0d1e2f",
+                                        contractAddress = "0xabc123def456",
+                                        network = "BNB",
+                                        tokenStandard = "ERC-20",
+                                        auditTrail = listOf(
+                                            AuditItem("Initial assessment completed", true),
+                                            AuditItem("Scientific analysis verified", true),
+                                            AuditItem("Expert verification approved", true),
+                                            AuditItem("Third-party compliance confirmed", true),
+                                            AuditItem("Blockchain registration complete", true)
+                                        ),
+                                        registryNotes = "",
+                                        imageUrl = selectedPendingSubmission?.imageUrl,
+                                        location = selectedPendingSubmission?.location ?: "",
+                                        coordinates = selectedPendingSubmission?.coordinates,
+                                        submissionDate = selectedPendingSubmission?.submissionDate
+                                            ?: System.currentTimeMillis(),
+                                        submitterName = selectedPendingSubmission?.submitterName
+                                            ?: "",
+                                        submitterEmail = selectedPendingSubmission?.submitterEmail
+                                            ?: "",
+                                        status = SubmissionStatus.APPROVED
+                                    )
+                                    selectedApprovedRegistry = registrySubmission
+                                    registryFormData = BlockchainRegistryForm()
+                                    selectedPendingSubmission = null
+                                    showBlockchainRegistryForm = true
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Icon(Icons.Default.ArrowForward, null)
+                                Spacer(Modifier.width(8.dp))
+                                Text("Proceed to Blockchain Registry", fontWeight = FontWeight.Bold)
+                            }
+                            Spacer(Modifier.height(8.dp))
+                        }
+
                         Button(
                             onClick = { selectedPendingSubmission = null },
                             modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (selectedPendingSubmission?.status == SubmissionStatus.APPROVED) 
+                                    Color.White.copy(alpha = 0.1f) else PrimaryGreen
+                            )
                         ) {
                             Text("Close")
                         }
@@ -1607,21 +1699,225 @@ fun BlueCarbonMonitorHomepage(
                 Surface(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color(0xFFEDEDED))
-                ) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                "Smart Contracts Portal (stub)",
-                                style = MaterialTheme.typography.headlineSmall,
-                                fontWeight = FontWeight.Bold
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    Color(0xFF07151A),
+                                    Color(0xFF0A2326),
+                                    Color(0xFF0C3339),
+                                    Color(0xFF0A2832)
+                                )
                             )
-                            Spacer(Modifier.height(32.dp))
+                        )
+                ) {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        // Animated gradient blobs
+                        Box(
+                            modifier = Modifier
+                                .size(400.dp)
+                                .offset(x = (-100).dp, y = (-150).dp)
+                                .background(PrimaryTeal.copy(alpha = 0.3f), CircleShape)
+                                .blur(100.dp)
+                        )
+                        Box(
+                            modifier = Modifier
+                                .size(350.dp)
+                                .align(Alignment.TopEnd)
+                                .offset(x = 100.dp, y = 50.dp)
+                                .background(PrimaryBlue.copy(alpha = 0.3f), CircleShape)
+                                .blur(100.dp)
+                        )
+                        Box(
+                            modifier = Modifier
+                                .size(300.dp)
+                                .align(Alignment.BottomStart)
+                                .offset(x = (-50).dp, y = 100.dp)
+                                .background(PrimaryGreen.copy(alpha = 0.2f), CircleShape)
+                                .blur(100.dp)
+                        )
+
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .verticalScroll(rememberScrollState())
+                                .padding(24.dp)
+                        ) {
+                            // Header
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column {
+                                    Text(
+                                        "Smart Contracts",
+                                        style = MaterialTheme.typography.headlineMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = TextPrimary
+                                    )
+                                    Text(
+                                        "Token Generation & Deployment",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = TextSecondary
+                                    )
+                                }
+                                IconButton(onClick = {
+                                    showSmartContractsPortal = false
+                                    smartContractData = null
+                                    selectedApprovedRegistry = null
+                                }) {
+                                    Icon(Icons.Default.Close, "Close", tint = TextPrimary)
+                                }
+                            }
+
+                            Spacer(Modifier.height(24.dp))
+
+                            // Transaction Status
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .glassEffect()
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(20.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Icon(
+                                        Icons.Default.Check,
+                                        contentDescription = null,
+                                        tint = PrimaryGreen,
+                                        modifier = Modifier.size(48.dp)
+                                    )
+                                    Spacer(Modifier.height(8.dp))
+                                    Text(
+                                        smartContractData!!.transactionStatus,
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.Bold,
+                                        color = PrimaryGreen
+                                    )
+                                    Spacer(Modifier.height(12.dp))
+                                    Text(
+                                        "Carbon Credit Tokens",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = TextSecondary
+                                    )
+                                    Text(
+                                        "${smartContractData!!.carbonCreditTokens} tCO₂",
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        fontWeight = FontWeight.Bold,
+                                        color = TextPrimary
+                                    )
+                                }
+                            }
+
+                            Spacer(Modifier.height(20.dp))
+
+                            // Contract Details
+                            Text(
+                                "Contract Details",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
+                            Spacer(Modifier.height(12.dp))
+
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .glassEffect()
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    InfoRow("Token Standard", smartContractData!!.tokenStandard)
+                                    InfoRow("Network", smartContractData!!.network)
+                                    InfoRow("Contract Address", smartContractData!!.contractAddress)
+                                    InfoRow("Deployment Date", smartContractData!!.deploymentDate)
+                                    InfoRow("Gas Used", smartContractData!!.gasUsed)
+                                }
+                            }
+
+                            Spacer(Modifier.height(16.dp))
+
+                            // Access Functions
+                            Text(
+                                "Access Functions",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .glassEffect()
+                            ) {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    smartContractData!!.accessFunctions.forEach { func ->
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.padding(vertical = 4.dp)
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Settings,
+                                                contentDescription = null,
+                                                tint = AccentCyan,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                            Spacer(Modifier.width(8.dp))
+                                            Text(
+                                                func,
+                                                color = TextPrimary,
+                                                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                                                style = MaterialTheme.typography.bodySmall
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            Spacer(Modifier.height(16.dp))
+
+                            // Contract Verification
+                            Text(
+                                "Contract Verification",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .glassEffect()
+                            ) {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    smartContractData!!.contractVerification.forEach { item ->
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.padding(vertical = 4.dp)
+                                        ) {
+                                            Icon(
+                                                if (item.verified) Icons.Default.Check else Icons.Default.Close,
+                                                contentDescription = null,
+                                                tint = if (item.verified) PrimaryGreen else Color(
+                                                    0xFFEF4444
+                                                ),
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                            Spacer(Modifier.width(8.dp))
+                                            Text(item.description, color = TextPrimary)
+                                        }
+                                    }
+                                }
+                            }
+
+                            Spacer(Modifier.height(24.dp))
+
+                            // Proceed Button
                             Button(
                                 onClick = {
                                     // Generate marketplace data
@@ -1663,9 +1959,20 @@ fun BlueCarbonMonitorHomepage(
                                     )
                                     showSmartContractsPortal = false
                                     showCarbonMarketplace = true
-                                }
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(56.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = AccentEmerald),
+                                shape = RoundedCornerShape(12.dp)
                             ) {
-                                Text("Proceed to Marketplace")
+                                Icon(Icons.Default.ArrowForward, null)
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    "Proceed to Marketplace",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
                             }
                         }
                     }
@@ -1686,57 +1993,412 @@ fun BlueCarbonMonitorHomepage(
                 Surface(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color(0xFFDCEEFB))
-                ) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                "Carbon Marketplace Portal (stub)",
-                                style = MaterialTheme.typography.headlineSmall,
-                                fontWeight = FontWeight.Bold
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    Color(0xFF07151A),
+                                    Color(0xFF0A2326),
+                                    Color(0xFF0C3339),
+                                    Color(0xFF0A2832)
+                                )
                             )
+                        )
+                ) {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        // Animated gradient blobs for glass effect background
+                        Box(
+                            modifier = Modifier
+                                .size(400.dp)
+                                .offset(x = (-100).dp, y = (-150).dp)
+                                .background(PrimaryTeal.copy(alpha = 0.3f), CircleShape)
+                                .blur(100.dp)
+                        )
+                        Box(
+                            modifier = Modifier
+                                .size(350.dp)
+                                .align(Alignment.TopEnd)
+                                .offset(x = 100.dp, y = 50.dp)
+                                .background(PrimaryBlue.copy(alpha = 0.3f), CircleShape)
+                                .blur(100.dp)
+                        )
+                        Box(
+                            modifier = Modifier
+                                .size(300.dp)
+                                .align(Alignment.BottomStart)
+                                .offset(x = (-50).dp, y = 100.dp)
+                                .background(PrimaryGreen.copy(alpha = 0.2f), CircleShape)
+                                .blur(100.dp)
+                        )
+
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .verticalScroll(rememberScrollState())
+                                .padding(24.dp)
+                        ) {
+                            // Header
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column {
+                                    Text(
+                                        "Carbon Marketplace",
+                                        style = MaterialTheme.typography.headlineMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = TextPrimary
+                                    )
+                                    Text(
+                                        "Trade Carbon Credits",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = TextSecondary
+                                    )
+                                }
+                                IconButton(onClick = {
+                                    showCarbonMarketplace = false
+                                    marketplaceData = null
+                                    selectedApprovedRegistry = null
+                                }) {
+                                    Icon(Icons.Default.Close, "Close", tint = TextPrimary)
+                                }
+                            }
+
                             Spacer(Modifier.height(24.dp))
-                            Button(
-                                onClick = {
-                                    val amount = 10.0
-                                    // Initiate Razorpay payment
-                                    Toast.makeText(
-                                        context,
-                                        "Initiating payment for $amount carbon credits",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                    // TODO: Implement Razorpay SDK integration
-                                }
+
+                            // Market Overview
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .glassEffect()
                             ) {
-                                Text("Buy Carbon Credits")
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    horizontalArrangement = Arrangement.SpaceAround
+                                ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Text(
+                                            "Total Volume",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = TextSecondary
+                                        )
+                                        Text(
+                                            "${formatNumber(marketplaceData!!.totalVolume)} tCO₂",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = PrimaryGreen
+                                        )
+                                    }
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Text(
+                                            "Active Listings",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = TextSecondary
+                                        )
+                                        Text(
+                                            marketplaceData!!.activeListings.toString(),
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = AccentCyan
+                                        )
+                                    }
+                                }
                             }
+
+                            Spacer(Modifier.height(16.dp))
+
+                            // Token Allocation
+                            Text(
+                                "Token Allocation",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
                             Spacer(Modifier.height(12.dp))
-                            Button(
-                                onClick = {
-                                    val amount = 5.0
-                                    Toast.makeText(
-                                        context,
-                                        "Listing $amount carbon credits for sale",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                }
+
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .glassEffect()
                             ) {
-                                Text("Sell Carbon Credits")
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text("Allocated Token", color = TextSecondary)
+                                        Text(
+                                            "${formatNumber(marketplaceData!!.tokenAllocation.allocatedToken)} tCO₂",
+                                            color = TextPrimary,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text("Staked Token", color = TextSecondary)
+                                        Text(
+                                            "${formatNumber(marketplaceData!!.tokenAllocation.stakedToken)} tCO₂",
+                                            color = PrimaryTeal,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text("Burned Token", color = TextSecondary)
+                                        Text(
+                                            "${formatNumber(marketplaceData!!.tokenAllocation.burnedToken)} tCO₂",
+                                            color = Color(0xFFEF4444),
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text("Remaining Token", color = TextSecondary)
+                                        Text(
+                                            "${formatNumber(marketplaceData!!.tokenAllocation.remainingToken)} tCO₂",
+                                            color = PrimaryGreen,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
                             }
-                            Spacer(Modifier.height(32.dp))
+
+                            Spacer(Modifier.height(16.dp))
+
+                            // Market Prices
+                            Text(
+                                "Market Prices (per tCO₂)",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
+                            Spacer(Modifier.height(8.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .glassEffect()
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(12.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Text(
+                                            "Carbon Offset",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = TextSecondary
+                                        )
+                                        Text(
+                                            "${formatNumber(marketplaceData!!.marketPrices.carbonOffset)}",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = PrimaryGreen
+                                        )
+                                    }
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .glassEffect()
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(12.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Text(
+                                            "Renewable",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = TextSecondary
+                                        )
+                                        Text(
+                                            "${formatNumber(marketplaceData!!.marketPrices.renewable)}",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = AccentCyan
+                                        )
+                                    }
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .glassEffect()
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(12.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Text(
+                                            "Forest",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = TextSecondary
+                                        )
+                                        Text(
+                                            "${formatNumber(marketplaceData!!.marketPrices.forest)}",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = AccentEmerald
+                                        )
+                                    }
+                                }
+                            }
+
+                            Spacer(Modifier.height(16.dp))
+
+                            // Transaction History
+                            if (marketplaceData!!.transactionHistory.isNotEmpty()) {
+                                Text(
+                                    "Transaction History",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextPrimary
+                                )
+                                Spacer(Modifier.height(8.dp))
+
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .glassEffect()
+                                ) {
+                                    Column(modifier = Modifier.padding(12.dp)) {
+                                        marketplaceData!!.transactionHistory.forEach { tx ->
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(vertical = 6.dp),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Column {
+                                                    Text(
+                                                        tx.type,
+                                                        style = MaterialTheme.typography.bodyMedium,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = if (tx.type == "Buy") PrimaryGreen else Color(
+                                                            0xFFFF9800
+                                                        )
+                                                    )
+                                                    Text(
+                                                        tx.date,
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = TextSecondary
+                                                    )
+                                                }
+                                                Column(horizontalAlignment = Alignment.End) {
+                                                    Text(
+                                                        "${formatNumber(tx.amount)} tCO₂",
+                                                        style = MaterialTheme.typography.bodyMedium,
+                                                        color = TextPrimary
+                                                    )
+                                                    Text(
+                                                        "${formatNumber(tx.price)}/t",
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = TextSecondary
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                Spacer(Modifier.height(16.dp))
+                            }
+
+                            // Action Buttons
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Button(
+                                    onClick = {
+                                        val amount = 10.0
+                                        Toast.makeText(
+                                            context,
+                                            "Initiating payment for $amount carbon credits",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                        // TODO: Implement Razorpay SDK integration
+                                    },
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(56.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Icon(Icons.Default.ShoppingCart, null)
+                                        Spacer(Modifier.height(4.dp))
+                                        Text(
+                                            "Buy Credits",
+                                            style = MaterialTheme.typography.labelMedium,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+
+                                Button(
+                                    onClick = {
+                                        val amount = 5.0
+                                        Toast.makeText(
+                                            context,
+                                            "Listing $amount carbon credits for sale",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    },
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(56.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = AccentCyan),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Icon(Icons.Default.Star, null)
+                                        Spacer(Modifier.height(4.dp))
+                                        Text(
+                                            "Sell Credits",
+                                            style = MaterialTheme.typography.labelMedium,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                            }
+
+                            Spacer(Modifier.height(16.dp))
+
                             Button(
                                 onClick = {
                                     showCarbonMarketplace = false
                                     marketplaceData = null
                                     selectedApprovedRegistry = null
-                                }
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(56.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color.White.copy(alpha = 0.1f)
+                                ),
+                                shape = RoundedCornerShape(12.dp)
                             ) {
-                                Text("Close Marketplace")
+                                Text(
+                                    "Close Marketplace",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextPrimary
+                                )
                             }
                         }
                     }
@@ -2360,259 +3022,346 @@ fun BlockchainRegistryFormPortal(
         Surface(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFF8B5CF6)) // Purple background matching image
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(24.dp)
-            ) {
-                // Header
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        "Blockchain Registry",
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color(0xFF07151A),
+                            Color(0xFF0A2326),
+                            Color(0xFF0C3339),
+                            Color(0xFF0A2832)
+                        )
                     )
-                    IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, "Close", tint = Color.White)
-                    }
-                }
-                Text(
-                    "Immutable Carbon Credit Ledger",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.8f)
+                )
+        ) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                // Animated gradient blobs for glass effect background
+                Box(
+                    modifier = Modifier
+                        .size(400.dp)
+                        .offset(x = (-100).dp, y = (-150).dp)
+                        .background(PrimaryTeal.copy(alpha = 0.3f), CircleShape)
+                        .blur(100.dp)
+                )
+                Box(
+                    modifier = Modifier
+                        .size(350.dp)
+                        .align(Alignment.TopEnd)
+                        .offset(x = 100.dp, y = 50.dp)
+                        .background(PrimaryBlue.copy(alpha = 0.3f), CircleShape)
+                        .blur(100.dp)
+                )
+                Box(
+                    modifier = Modifier
+                        .size(300.dp)
+                        .align(Alignment.BottomStart)
+                        .offset(x = (-50).dp, y = 100.dp)
+                        .background(PrimaryGreen.copy(alpha = 0.2f), CircleShape)
+                        .blur(100.dp)
                 )
 
-                Spacer(Modifier.height(24.dp))
-
-                // Registration Status
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(24.dp)
                 ) {
-                    Column(
+                    // Header
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                "Blockchain Registry",
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
+                            Text(
+                                "Immutable Carbon Credit Ledger",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = TextSecondary
+                            )
+                        }
+                        IconButton(onClick = onDismiss) {
+                            Icon(Icons.Default.Close, "Close", tint = TextPrimary)
+                        }
+                    }
+
+                    Spacer(Modifier.height(24.dp))
+
+                    // Registration Status
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(20.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                            .glassEffect()
                     ) {
-                        Text("Status", style = MaterialTheme.typography.labelMedium)
-                        Text(
-                            "Registered",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = PrimaryGreen
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        Text("Block Number", style = MaterialTheme.typography.labelSmall)
-                        Text(
-                            registry.blockNumber,
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(Modifier.height(4.dp))
-                        Text("Transaction", style = MaterialTheme.typography.labelSmall)
-                        Text(
-                            "2023-10-15 14:30:22 UTC",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
-                }
-
-                Spacer(Modifier.height(20.dp))
-
-                // Credit Details Form
-                Text(
-                    "Credit Details",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-                Spacer(Modifier.height(12.dp))
-
-                OutlinedTextField(
-                    value = formData.creditAmount,
-                    onValueChange = { onFormDataChange(formData.copy(creditAmount = it)) },
-                    label = { Text("Credit Amount*", color = Color.White.copy(alpha = 0.7f)) },
-                    placeholder = { Text("2.3 tCO₂") },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                        focusedBorderColor = Color.White,
-                        unfocusedBorderColor = Color.White.copy(alpha = 0.5f)
-                    )
-                )
-
-                Spacer(Modifier.height(12.dp))
-
-                OutlinedTextField(
-                    value = formData.projectArea,
-                    onValueChange = { onFormDataChange(formData.copy(projectArea = it)) },
-                    label = { Text("Project Area*", color = Color.White.copy(alpha = 0.7f)) },
-                    placeholder = { Text("1.2 hectares") },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                        focusedBorderColor = Color.White,
-                        unfocusedBorderColor = Color.White.copy(alpha = 0.5f)
-                    )
-                )
-
-                Spacer(Modifier.height(12.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    OutlinedTextField(
-                        value = formData.vintageYear,
-                        onValueChange = { onFormDataChange(formData.copy(vintageYear = it)) },
-                        label = { Text("Vintage Year*", color = Color.White.copy(alpha = 0.7f)) },
-                        placeholder = { Text("2023") },
-                        modifier = Modifier.weight(1f),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White,
-                            focusedBorderColor = Color.White,
-                            unfocusedBorderColor = Color.White.copy(alpha = 0.5f)
-                        )
-                    )
-
-                    OutlinedTextField(
-                        value = formData.verificationDate,
-                        onValueChange = { onFormDataChange(formData.copy(verificationDate = it)) },
-                        label = {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(20.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(
+                                Icons.Default.Check,
+                                contentDescription = null,
+                                tint = PrimaryGreen,
+                                modifier = Modifier.size(48.dp)
+                            )
+                            Spacer(Modifier.height(8.dp))
                             Text(
-                                "Verification Date*",
-                                color = Color.White.copy(alpha = 0.7f)
+                                "Registered",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = PrimaryGreen
+                            )
+                            Spacer(Modifier.height(12.dp))
+                            Text(
+                                "Block Number",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = TextSecondary
+                            )
+                            Text(
+                                registry.blockNumber,
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                "Transaction",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = TextSecondary
+                            )
+                            Text(
+                                "2023-10-15 14:30:22 UTC",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = TextPrimary
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(20.dp))
+
+                    // Credit Details Form
+                    Text(
+                        "Credit Details",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+                    Spacer(Modifier.height(12.dp))
+
+                    OutlinedTextField(
+                        value = formData.creditAmount,
+                        onValueChange = { onFormDataChange(formData.copy(creditAmount = it)) },
+                        label = { Text("Credit Amount*", color = TextSecondary) },
+                        placeholder = {
+                            Text(
+                                "2.3 tCO₂",
+                                color = TextSecondary.copy(alpha = 0.5f)
                             )
                         },
-                        placeholder = { Text("10/10/2023") },
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.fillMaxWidth(),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White,
-                            focusedBorderColor = Color.White,
-                            unfocusedBorderColor = Color.White.copy(alpha = 0.5f)
-                        )
+                            focusedTextColor = TextPrimary,
+                            unfocusedTextColor = TextPrimary,
+                            focusedBorderColor = PrimaryTeal,
+                            unfocusedBorderColor = Color.White.copy(alpha = 0.3f)
+                        ),
+                        shape = RoundedCornerShape(12.dp)
                     )
-                }
 
-                Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(12.dp))
 
-                // Transaction Hash
-                Text(
-                    "Transaction Hash",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-                Spacer(Modifier.height(8.dp))
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.15f))
-                ) {
-                    Text(
-                        registry.transactionHash,
-                        modifier = Modifier.padding(16.dp),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.White,
-                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                    OutlinedTextField(
+                        value = formData.projectArea,
+                        onValueChange = { onFormDataChange(formData.copy(projectArea = it)) },
+                        label = { Text("Project Area*", color = TextSecondary) },
+                        placeholder = {
+                            Text(
+                                "1.2 hectares",
+                                color = TextSecondary.copy(alpha = 0.5f)
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = TextPrimary,
+                            unfocusedTextColor = TextPrimary,
+                            focusedBorderColor = PrimaryTeal,
+                            unfocusedBorderColor = Color.White.copy(alpha = 0.3f)
+                        ),
+                        shape = RoundedCornerShape(12.dp)
                     )
-                }
 
-                Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(12.dp))
 
-                // Audit Trail
-                Text(
-                    "Audit Trail",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-                Spacer(Modifier.height(8.dp))
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = PrimaryGreen.copy(alpha = 0.2f))
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        registry.auditTrail.forEach { audit ->
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(vertical = 4.dp)
-                            ) {
-                                Icon(
-                                    if (audit.completed) Icons.Default.Check else Icons.Default.Close,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(20.dp)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = formData.vintageYear,
+                            onValueChange = { onFormDataChange(formData.copy(vintageYear = it)) },
+                            label = { Text("Vintage Year*", color = TextSecondary) },
+                            placeholder = {
+                                Text(
+                                    "2023",
+                                    color = TextSecondary.copy(alpha = 0.5f)
                                 )
-                                Spacer(Modifier.width(8.dp))
-                                Text(audit.description, color = Color.White)
+                            },
+                            modifier = Modifier.weight(1f),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = TextPrimary,
+                                unfocusedTextColor = TextPrimary,
+                                focusedBorderColor = PrimaryTeal,
+                                unfocusedBorderColor = Color.White.copy(alpha = 0.3f)
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+
+                        OutlinedTextField(
+                            value = formData.verificationDate,
+                            onValueChange = { onFormDataChange(formData.copy(verificationDate = it)) },
+                            label = {
+                                Text(
+                                    "Verification Date*",
+                                    color = TextSecondary
+                                )
+                            },
+                            placeholder = {
+                                Text(
+                                    "10/10/2023",
+                                    color = TextSecondary.copy(alpha = 0.5f)
+                                )
+                            },
+                            modifier = Modifier.weight(1f),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = TextPrimary,
+                                unfocusedTextColor = TextPrimary,
+                                focusedBorderColor = PrimaryTeal,
+                                unfocusedBorderColor = Color.White.copy(alpha = 0.3f)
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                    }
+
+                    Spacer(Modifier.height(16.dp))
+
+                    // Transaction Hash
+                    Text(
+                        "Transaction Hash",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .glassEffect()
+                    ) {
+                        Text(
+                            registry.transactionHash,
+                            modifier = Modifier.padding(16.dp),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextPrimary,
+                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                        )
+                    }
+
+                    Spacer(Modifier.height(16.dp))
+
+                    // Audit Trail
+                    Text(
+                        "Audit Trail",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .glassEffect()
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            registry.auditTrail.forEach { audit ->
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(vertical = 4.dp)
+                                ) {
+                                    Icon(
+                                        if (audit.completed) Icons.Default.Check else Icons.Default.Close,
+                                        contentDescription = null,
+                                        tint = if (audit.completed) PrimaryGreen else Color(
+                                            0xFFEF4444
+                                        ),
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(audit.description, color = TextPrimary)
+                                }
                             }
                         }
                     }
-                }
 
-                Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(16.dp))
 
-                // Registry Notes
-                Text(
-                    "Registry Notes",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-                Spacer(Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = formData.registryNotes,
-                    onValueChange = { onFormDataChange(formData.copy(registryNotes = it)) },
-                    placeholder = {
-                        Text(
-                            "Add any additional notes or observations...",
-                            color = Color.White.copy(alpha = 0.5f)
-                        )
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(120.dp),
-                    maxLines = 5,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                        focusedBorderColor = Color.White,
-                        unfocusedBorderColor = Color.White.copy(alpha = 0.5f)
-                    )
-                )
-
-                Spacer(Modifier.height(24.dp))
-
-                // Submit Button
-                Button(
-                    onClick = onSubmit,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9800)),
-                    enabled = formData.creditAmount.isNotBlank() &&
-                            formData.projectArea.isNotBlank() &&
-                            formData.vintageYear.isNotBlank() &&
-                            formData.verificationDate.isNotBlank()
-                ) {
+                    // Registry Notes
                     Text(
-                        "Proceed to Tokenization",
+                        "Registry Notes",
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
                     )
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = formData.registryNotes,
+                        onValueChange = { onFormDataChange(formData.copy(registryNotes = it)) },
+                        placeholder = {
+                            Text(
+                                "Add any additional notes or observations...",
+                                color = TextSecondary.copy(alpha = 0.5f)
+                            )
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(120.dp),
+                        maxLines = 5,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = TextPrimary,
+                            unfocusedTextColor = TextPrimary,
+                            focusedBorderColor = PrimaryTeal,
+                            unfocusedBorderColor = Color.White.copy(alpha = 0.3f)
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+
+                    Spacer(Modifier.height(24.dp))
+
+                    // Submit Button
+                    Button(
+                        onClick = onSubmit,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = AccentEmerald),
+                        enabled = formData.creditAmount.isNotBlank() &&
+                                formData.projectArea.isNotBlank() &&
+                                formData.vintageYear.isNotBlank() &&
+                                formData.verificationDate.isNotBlank(),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.ArrowForward, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            "Proceed to Tokenization",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
         }
