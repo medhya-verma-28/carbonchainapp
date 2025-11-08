@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.zIndex
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import coil.compose.AsyncImage
@@ -1532,78 +1533,85 @@ fun BlueCarbonMonitorHomepage(
 
 
 
-        // History Drawer - ABOVE Main Content with completely opaque background
-        AnimatedVisibility(
-            visible = showHistoryDrawer,
-            enter = slideInHorizontally(
-                initialOffsetX = { -it },
-                animationSpec = tween(300)
-            ) + fadeIn(animationSpec = tween(300)),
-            exit = slideOutHorizontally(
-                targetOffsetX = { -it },
-                animationSpec = tween(300)
-            ) + fadeOut(animationSpec = tween(300))
-        ) {
+        // History Drawer - Modal overlay with scrim to block content behind
+        if (showHistoryDrawer) {
             Box(
                 modifier = Modifier
-                    .fillMaxSize()
+                    .zIndex(1f)
+                    .fillMaxHeight()
+                    .width(340.dp)
+                    .background(DarkBackground) // Semi-transparent overlay/scrim
+                    .clickable(
+                        indication = null,
+                        interactionSource = remember { MutableInteractionSource() }
+                    ) {
+                        showHistoryDrawer = false // Close drawer when clicking outside
+                    }
             ) {
-
-                // Drawer surface - completely opaque with dark green background
-                Box(
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .width(340.dp)
-                        .align(Alignment.CenterStart)
-                        .background(DarkBackground) // Second layer: solid dark background
+                AnimatedVisibility(
+                    visible = showHistoryDrawer,
+                    enter = slideInHorizontally(
+                        initialOffsetX = { -it },
+                        animationSpec = tween(300)
+                    ),
+                    exit = slideOutHorizontally(
+                        targetOffsetX = { -it },
+                        animationSpec = tween(300)
+                    ),
+                    modifier = Modifier.align(Alignment.CenterStart)
                 ) {
                     Surface(
                         modifier = Modifier
+                            .zIndex(1f)
                             .fillMaxHeight()
                             .width(340.dp)
-                            .align(Alignment.CenterStart)
-                            .background(DarkBackground),// Completely opaque dark background
-                        tonalElevation = 0.dp,
-                        shadowElevation = 0.dp
-                    ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(DarkBackground) // Third layer inside column
-                            .padding(20.dp)
-                    ) {
-                        // Drawer Header
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            .clickable(
+                                indication = null,
+                                interactionSource = remember { MutableInteractionSource() }
                             ) {
-                                Icon(
-                                    Icons.Default.DateRange,
-                                    contentDescription = null,
-                                    tint = AccentCyan,
-                                    modifier = Modifier.size(28.dp)
-                                )
-                                Text(
-                                    "History",
-                                    style = MaterialTheme.typography.titleLarge,
-                                    fontWeight = FontWeight.Bold,
-                                    color = TextPrimary
-                                )
+                                // Consume clicks on the drawer itself
+                            },
+                        color = DarkBackground,
+                        tonalElevation = 8.dp,
+                        shadowElevation = 8.dp
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(20.dp)
+                        ) {
+                            // Drawer Header
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.DateRange,
+                                        contentDescription = null,
+                                        tint = AccentCyan,
+                                        modifier = Modifier.size(28.dp)
+                                    )
+                                    Text(
+                                        "History",
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.Bold,
+                                        color = TextPrimary
+                                    )
+                                }
+                                IconButton(onClick = { showHistoryDrawer = false }) {
+                                    Icon(
+                                        Icons.Default.Close,
+                                        contentDescription = "Close history",
+                                        tint = TextPrimary,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
                             }
-                            IconButton(onClick = { showHistoryDrawer = false }) {
-                                Icon(
-                                    Icons.Default.Close,
-                                    contentDescription = "Close history",
-                                    tint = TextPrimary,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
-                        }
 
                         Spacer(Modifier.height(8.dp))
 
@@ -1614,17 +1622,18 @@ fun BlueCarbonMonitorHomepage(
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            FilterChip(
+                            FilterChip(modifier = Modifier.zIndex(1f),
                                 selected = historyFilter == null,
                                 onClick = { historyFilter = null },
                                 label = {
                                     Text(
                                         "All",
                                         color = if (historyFilter == null) PrimaryGreen else TextSecondary
+
                                     )
                                 }
                             )
-                            FilterChip(
+                            FilterChip(modifier = Modifier.zIndex(1f),
                                 selected = historyFilter == SubmissionStatus.APPROVED,
                                 onClick = {
                                     historyFilter =
@@ -1637,7 +1646,7 @@ fun BlueCarbonMonitorHomepage(
                                     )
                                 }
                             )
-                            FilterChip(
+                            FilterChip(modifier = Modifier.zIndex(1f),
                                 selected = historyFilter == SubmissionStatus.PENDING,
                                 onClick = {
                                     historyFilter =
@@ -1649,7 +1658,13 @@ fun BlueCarbonMonitorHomepage(
                                         color = if (historyFilter == SubmissionStatus.PENDING) AccentCyan else TextSecondary
                                     )
                                 }
-                            )
+                            )}
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ){
                             FilterChip(
                                 selected = historyFilter == SubmissionStatus.REJECTED,
                                 onClick = {
