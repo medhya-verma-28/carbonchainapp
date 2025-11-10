@@ -664,6 +664,86 @@ private fun SubmissionDetailSheet(
                 }
             }
 
+            // AI Verification Results
+            if (submission.aiVerificationTimestamp != null) {
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .verificationGlassEffect()
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Star,
+                                    contentDescription = null,
+                                    tint = if (submission.aiLandscapeDetected) AccentCyan else PrimaryRed,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Text(
+                                    "AI Landscape Verification",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextPrimary
+                                )
+                            }
+                            Spacer(Modifier.height(12.dp))
+                            DetailRow(
+                                "Landscape Detected",
+                                if (submission.aiLandscapeDetected) "Yes" else "No"
+                            )
+                            if (submission.aiLandscapeCategory.isNotEmpty()) {
+                                DetailRow("Category", submission.aiLandscapeCategory.replace("_", " "))
+                            }
+                            DetailRow(
+                                "AI Confidence",
+                                "${String.format("%.1f", submission.aiConfidence)}%"
+                            )
+                            // AI-based recommendation
+                            Spacer(Modifier.height(12.dp))
+                            val recommendApproval = submission.aiLandscapeDetected && 
+                                                    submission.aiConfidence >= 75.0
+                            Surface(
+                                color = if (recommendApproval) PrimaryGreen.copy(alpha = 0.15f) 
+                                       else PrimaryOrange.copy(alpha = 0.15f),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        if (recommendApproval) Icons.Default.Check else Icons.Default.Warning,
+                                        contentDescription = null,
+                                        tint = if (recommendApproval) PrimaryGreen else PrimaryOrange,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(
+                                        if (recommendApproval) 
+                                            "AI recommends approval - landscape verified with high confidence"
+                                        else 
+                                            "Manual review required - low landscape confidence",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = TextPrimary,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             // Notes
             if (submission.notes.isNotEmpty()) {
                 item {

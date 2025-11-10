@@ -178,7 +178,11 @@ data class UserSubmission(
     val submitterEmail: String,
     val notes: String = "",
     val blockchainRegistryCompleted: Boolean = false,
-    val completionDate: Long? = null
+    val completionDate: Long? = null,
+    val aiLandscapeDetected: Boolean = false,
+    val aiLandscapeCategory: String = "",
+    val aiAnalysisDescription: String = "",
+    val aiVerificationTimestamp: Long? = null
 ) : Parcelable
 
 @Parcelize
@@ -309,7 +313,10 @@ data class ImpactDashboardData(
     val carbonReduced: Double = 2.27, // in tonnes
     val marketValue: Double = 117.0, // in dollars
     val monitoringPeriod: String = "M1",
-    val monitoringDate: String = "04/04/2023",
+    val monitoringDate: String = java.text.SimpleDateFormat(
+        "MM/dd/yyyy",
+        java.util.Locale.US
+    ).format(java.util.Date(System.currentTimeMillis())),
     val carbonSequestered: Double = 150.0, // in kg
     val co2eReduction: Double = 2391.0, // in kg
     val peopleImpacted: Int = 516020,

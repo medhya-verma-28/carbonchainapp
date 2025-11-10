@@ -1,7 +1,9 @@
 package com.runanywhere.startup_hackathon20.viewmodel
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.runanywhere.startup_hackathon20.ai.LandscapeClassifier
 import com.runanywhere.startup_hackathon20.blockchain.BlockchainService
 import com.runanywhere.startup_hackathon20.data.*
 import com.runanywhere.startup_hackathon20.repository.CarbonRepository
@@ -12,10 +14,11 @@ import kotlinx.coroutines.launch
 /**
  * ViewModel for managing carbon registry UI state and business logic
  */
-class CarbonViewModel : ViewModel() {
+class CarbonViewModel(context: Context) : ViewModel() {
 
     private val blockchainService = BlockchainService()
-    private val repository = CarbonRepository(blockchainService)
+    private val landscapeClassifier = LandscapeClassifier(context)
+    private val repository = CarbonRepository(blockchainService, landscapeClassifier)
 
     // State flows from repository
     val projects = repository.projects
@@ -342,4 +345,18 @@ sealed class UiState {
     object Loading : UiState()
     data class Success(val message: String) : UiState()
     data class Error(val message: String) : UiState()
+}
+
+/**
+ * Factory for creating CarbonViewModel with Context
+ */
+class CarbonViewModelFactory(private val context: Context) :
+    androidx.lifecycle.ViewModelProvider.Factory {
+    override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(CarbonViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return CarbonViewModel(context) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
+    }
 }

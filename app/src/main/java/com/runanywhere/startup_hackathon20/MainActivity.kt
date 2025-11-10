@@ -60,6 +60,7 @@ import com.runanywhere.startup_hackathon20.data.*
 import com.runanywhere.startup_hackathon20.ui.theme.Startup_hackathon20Theme
 import com.runanywhere.startup_hackathon20.ui.AdminVerificationScreen
 import com.runanywhere.startup_hackathon20.viewmodel.CarbonViewModel
+import com.runanywhere.startup_hackathon20.viewmodel.CarbonViewModelFactory
 import com.runanywhere.startup_hackathon20.viewmodel.UiState
 import kotlinx.coroutines.launch
 import java.io.File
@@ -81,7 +82,7 @@ val TextPrimary = Color(0xFFFFFFFF)
 val TextSecondary = Color(0xFFA6B9C4)
 
 class MainActivity : ComponentActivity() {
-    private val viewModel: CarbonViewModel by viewModels()
+    private val viewModel: CarbonViewModel by viewModels { CarbonViewModelFactory(applicationContext) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -1765,7 +1766,10 @@ fun BlueCarbonMonitorHomepage(
                                         statusColor = PrimaryGreen,
                                         onClick = {
                                             selectedApprovedRegistry = registry
-                                            registryFormData = BlockchainRegistryForm()
+                                            registryFormData = BlockchainRegistryForm(
+                                                creditAmount = registry.creditAmount.toString(),
+                                                projectArea = registry.projectArea
+                                            )
                                             showHistoryDrawer = false
                                             showBlockchainRegistryForm = true
                                         }
@@ -2045,12 +2049,16 @@ fun BlueCarbonMonitorHomepage(
                                         val registrySubmission = CarbonRegistrySubmission(
                                             id = currentSubmission?.id ?: "",
                                             registrationStatus = RegistrationStatus.REGISTERED,
-                                            blockNumber = "12,346,678",
+                                            blockNumber = "${(13000000 + (System.currentTimeMillis() / 1000).toInt() % 1000000)}",
                                             creditAmount = currentSubmission?.co2Value
                                                 ?: 2.3,
                                             projectArea = "${currentSubmission?.hectaresValue ?: 1.2} hectares",
-                                            vintageYear = 2023,
-                                            verificationDate = "10/10/2023",
+                                            vintageYear = java.util.Calendar.getInstance()
+                                                .get(java.util.Calendar.YEAR),
+                                            verificationDate = SimpleDateFormat(
+                                                "MM/dd/yyyy",
+                                                Locale.US
+                                            ).format(Date(System.currentTimeMillis())),
                                             transactionHash = "0x7a3f2b2c4a5d4f4b2c3a2b1c5d4f2a1b6c7d8e9f1a2b3c4d5e6f7a8b9c0d1e2f",
                                             contractAddress = "0xabc123def456",
                                             network = "BNB",
@@ -2075,7 +2083,11 @@ fun BlueCarbonMonitorHomepage(
                                             status = SubmissionStatus.APPROVED
                                         )
                                         selectedApprovedRegistry = registrySubmission
-                                        registryFormData = BlockchainRegistryForm()
+                                        registryFormData = BlockchainRegistryForm(
+                                            creditAmount = (currentSubmission?.co2Value
+                                                ?: 2.3).toString(),
+                                            projectArea = "${currentSubmission?.hectaresValue ?: 1.2} hectares"
+                                        )
                                         selectedPendingSubmission = null
                                         showBlockchainRegistryForm = true
                                     },
@@ -2128,7 +2140,10 @@ fun BlueCarbonMonitorHomepage(
                         tokenStandard = "ERC-20",
                         network = "BNB",
                         contractAddress = "0xabc123...def789",
-                        deploymentDate = "10/10/2023",
+                        deploymentDate = SimpleDateFormat(
+                            "MM/dd/yyyy",
+                            Locale.US
+                        ).format(Date(System.currentTimeMillis())),
                         gasUsed = "340,459",
                         contractVerification = listOf(
                             ContractVerificationItem("Source code verified", true),
@@ -2403,13 +2418,19 @@ fun BlueCarbonMonitorHomepage(
                                                 "Buy",
                                                 12.0,
                                                 12.62,
-                                                "14/12/2023"
+                                                SimpleDateFormat(
+                                                    "dd/MM/yyyy",
+                                                    Locale.US
+                                                ).format(Date(System.currentTimeMillis() - 3 * 24 * 60 * 60 * 1000))
                                             ),
                                             MarketTransaction(
                                                 "Sell",
                                                 10.0,
                                                 46.16,
-                                                "16/12/2023"
+                                                SimpleDateFormat(
+                                                    "dd/MM/yyyy",
+                                                    Locale.US
+                                                ).format(Date(System.currentTimeMillis() - 1 * 24 * 60 * 60 * 1000))
                                             )
                                         )
                                     )
@@ -3714,7 +3735,11 @@ fun BlockchainRegistryFormPortal(
                                 color = TextSecondary
                             )
                             Text(
-                                "2023-10-15 14:30:22 UTC",
+                                SimpleDateFormat(
+                                    "yyyy-MM-dd HH:mm:ss 'UTC'",
+                                    Locale.US
+                                ).apply { timeZone = java.util.TimeZone.getTimeZone("UTC") }
+                                    .format(Date(System.currentTimeMillis())),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = TextPrimary
                             )
@@ -3735,7 +3760,7 @@ fun BlockchainRegistryFormPortal(
                     OutlinedTextField(
                         value = formData.creditAmount,
                         onValueChange = { onFormDataChange(formData.copy(creditAmount = it)) },
-                        label = { Text("Credit Amount*", color = TextSecondary) },
+                        label = { Text("Credit Amount* (AI Generated)", color = TextSecondary) },
                         placeholder = {
                             Text(
                                 "2.3 tCO₂",
@@ -3743,9 +3768,14 @@ fun BlockchainRegistryFormPortal(
                             )
                         },
                         modifier = Modifier.fillMaxWidth(),
+                        enabled = false,
+                        readOnly = true,
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedTextColor = TextPrimary,
                             unfocusedTextColor = TextPrimary,
+                            disabledTextColor = TextPrimary.copy(alpha = 0.8f),
+                            disabledBorderColor = PrimaryGreen.copy(alpha = 0.5f),
+                            disabledLabelColor = PrimaryGreen.copy(alpha = 0.7f),
                             focusedBorderColor = PrimaryTeal,
                             unfocusedBorderColor = Color.White.copy(alpha = 0.3f)
                         ),
@@ -3757,7 +3787,7 @@ fun BlockchainRegistryFormPortal(
                     OutlinedTextField(
                         value = formData.projectArea,
                         onValueChange = { onFormDataChange(formData.copy(projectArea = it)) },
-                        label = { Text("Project Area*", color = TextSecondary) },
+                        label = { Text("Project Area* (AI Generated)", color = TextSecondary) },
                         placeholder = {
                             Text(
                                 "1.2 hectares",
@@ -3765,9 +3795,14 @@ fun BlockchainRegistryFormPortal(
                             )
                         },
                         modifier = Modifier.fillMaxWidth(),
+                        enabled = false,
+                        readOnly = true,
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedTextColor = TextPrimary,
                             unfocusedTextColor = TextPrimary,
+                            disabledTextColor = TextPrimary.copy(alpha = 0.8f),
+                            disabledBorderColor = PrimaryGreen.copy(alpha = 0.5f),
+                            disabledLabelColor = PrimaryGreen.copy(alpha = 0.7f),
                             focusedBorderColor = PrimaryTeal,
                             unfocusedBorderColor = Color.White.copy(alpha = 0.3f)
                         ),
@@ -3786,7 +3821,10 @@ fun BlockchainRegistryFormPortal(
                             label = { Text("Vintage Year*", color = TextSecondary) },
                             placeholder = {
                                 Text(
-                                    "2023",
+                                    "${
+                                        java.util.Calendar.getInstance()
+                                            .get(java.util.Calendar.YEAR)
+                                    }",
                                     color = TextSecondary.copy(alpha = 0.5f)
                                 )
                             },
@@ -3810,8 +3848,10 @@ fun BlockchainRegistryFormPortal(
                                 )
                             },
                             placeholder = {
+                                val dateFormat =
+                                    android.text.format.DateFormat.getDateFormat(LocalContext.current)
                                 Text(
-                                    "10/10/2023",
+                                    dateFormat.format(Date(System.currentTimeMillis())),
                                     color = TextSecondary.copy(alpha = 0.5f)
                                 )
                             },

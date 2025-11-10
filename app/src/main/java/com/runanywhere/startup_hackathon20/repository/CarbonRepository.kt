@@ -1,5 +1,7 @@
 package com.runanywhere.startup_hackathon20.repository
 
+import android.net.Uri
+import com.runanywhere.startup_hackathon20.ai.LandscapeClassifier
 import com.runanywhere.startup_hackathon20.blockchain.BlockchainService
 import com.runanywhere.startup_hackathon20.data.*
 import kotlinx.coroutines.delay
@@ -12,7 +14,8 @@ import kotlin.random.Random
  * Repository for managing carbon credits and projects
  */
 class CarbonRepository(
-    private val blockchainService: BlockchainService
+    private val blockchainService: BlockchainService,
+    private val landscapeClassifier: LandscapeClassifier? = null
 ) {
 
     private val _projects = MutableStateFlow<List<CarbonProject>>(emptyList())
@@ -195,9 +198,11 @@ class CarbonRepository(
                 issueDate = currentTime - (yearInMillis / 2),
                 expiryDate = currentTime + (5 * yearInMillis),
                 blockchainHash = "0x1a2b3c4d5e6f7890abcdef1234567890abcdef1234567890abcdef1234567890",
-                vintage = 2024,
+                vintage = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR),
                 methodology = "VM0042",
-                serialNumber = "VCS-2024-001",
+                serialNumber = "VCS-${
+                    java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
+                }-001",
                 description = "Carbon credits from verified rainforest conservation activities",
                 certificationBody = "Verra",
                 imageUrl = null
@@ -214,9 +219,11 @@ class CarbonRepository(
                 issueDate = currentTime - (yearInMillis / 3),
                 expiryDate = currentTime + (4 * yearInMillis),
                 blockchainHash = "0x2b3c4d5e6f7890abcdef1234567890abcdef1234567890abcdef1234567890ab",
-                vintage = 2024,
+                vintage = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR),
                 methodology = "GS-001",
-                serialNumber = "GS-2024-002",
+                serialNumber = "GS-${
+                    java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
+                }-002",
                 description = "Renewable energy credits from solar power generation",
                 certificationBody = "Gold Standard",
                 imageUrl = null
@@ -233,9 +240,11 @@ class CarbonRepository(
                 issueDate = currentTime - (yearInMillis / 4),
                 expiryDate = currentTime + (6 * yearInMillis),
                 blockchainHash = "0x3c4d5e6f7890abcdef1234567890abcdef1234567890abcdef1234567890abcd",
-                vintage = 2024,
+                vintage = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR),
                 methodology = "VM0089",
-                serialNumber = "VCS-2024-003",
+                serialNumber = "VCS-${
+                    java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
+                }-003",
                 description = "Clean energy credits from offshore wind farm",
                 certificationBody = "Verra",
                 imageUrl = null
@@ -252,9 +261,11 @@ class CarbonRepository(
                 issueDate = currentTime - (yearInMillis / 6),
                 expiryDate = currentTime + (3 * yearInMillis),
                 blockchainHash = "0x4d5e6f7890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
-                vintage = 2024,
+                vintage = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR),
                 methodology = "PV-001",
-                serialNumber = "PV-2024-004",
+                serialNumber = "PV-${
+                    java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
+                }-004",
                 description = "Blue carbon credits from mangrove restoration",
                 certificationBody = "Plan Vivo",
                 imageUrl = null
@@ -269,10 +280,10 @@ class CarbonRepository(
                 location = "New Delhi, India",
                 dataQuality = "High",
                 status = SubmissionStatus.PENDING,
-                co2Value = 2.3,
-                hectaresValue = 1.2,
-                vegetationCoverage = 74.0,
-                aiConfidence = 84.0,
+                co2Value = 2.8,
+                hectaresValue = 1.5,
+                vegetationCoverage = 82.0,
+                aiConfidence = 88.0,
                 imageUrl = "https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?w=800",
                 coordinates = Coordinates(28.6139, 77.2090),
                 gpsVerified = true,
@@ -281,27 +292,35 @@ class CarbonRepository(
                 coordinatesWithinRange = true,
                 submitterName = "John Doe",
                 submitterEmail = "john.doe@example.com",
-                notes = ""
+                notes = "",
+                aiLandscapeDetected = true,
+                aiLandscapeCategory = "NATURAL_LANDSCAPE",
+                aiAnalysisDescription = "Dense forest area with high vegetation coverage",
+                aiVerificationTimestamp = System.currentTimeMillis()
             ),
             UserSubmission(
                 id = "MANS-3822",
                 submissionDate = currentTime - 5 * 24 * 60 * 60 * 1000,
                 location = "Mumbai, India",
-                dataQuality = "Medium",
+                dataQuality = "Low",
                 status = SubmissionStatus.PENDING,
-                co2Value = 1.8,
-                hectaresValue = 0.9,
-                vegetationCoverage = 65.0,
-                aiConfidence = 78.0,
+                co2Value = 0.0,
+                hectaresValue = 0.0,
+                vegetationCoverage = 0.0,
+                aiConfidence = 15.0,
                 imageUrl = "https://images.unsplash.com/photo-1511497584788-876760111969?w=800",
                 coordinates = Coordinates(19.0760, 72.8777),
                 gpsVerified = true,
                 satelliteDataVerified = false,
-                imageQualityVerified = true,
+                imageQualityVerified = false,
                 coordinatesWithinRange = true,
                 submitterName = "Jane Smith",
                 submitterEmail = "jane.smith@example.com",
-                notes = ""
+                notes = "",
+                aiLandscapeDetected = false,
+                aiLandscapeCategory = "NOT_LANDSCAPE",
+                aiAnalysisDescription = "Indoor scene, not a geographical landscape",
+                aiVerificationTimestamp = System.currentTimeMillis()
             ),
             UserSubmission(
                 id = "MANS-3820",
@@ -309,10 +328,10 @@ class CarbonRepository(
                 location = "Bangalore, India",
                 dataQuality = "High",
                 status = SubmissionStatus.APPROVED,
-                co2Value = 3.1,
-                hectaresValue = 1.5,
-                vegetationCoverage = 82.0,
-                aiConfidence = 91.0,
+                co2Value = 3.5,
+                hectaresValue = 2.1,
+                vegetationCoverage = 91.0,
+                aiConfidence = 94.0,
                 imageUrl = "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800",
                 coordinates = Coordinates(12.9716, 77.5946),
                 gpsVerified = true,
@@ -321,7 +340,11 @@ class CarbonRepository(
                 coordinatesWithinRange = true,
                 submitterName = "Alice Johnson",
                 submitterEmail = "alice.j@example.com",
-                notes = "Approved and uploaded to blockchain"
+                notes = "Approved and uploaded to blockchain",
+                aiLandscapeDetected = true,
+                aiLandscapeCategory = "NATURAL_LANDSCAPE",
+                aiAnalysisDescription = "Dense forest with excellent vegetation coverage and high carbon sequestration potential",
+                aiVerificationTimestamp = System.currentTimeMillis()
             )
         )
 
@@ -330,11 +353,15 @@ class CarbonRepository(
             CarbonRegistrySubmission(
                 id = "MANS-3820",
                 registrationStatus = RegistrationStatus.REGISTERED,
-                blockNumber = "13,546,678",
-                creditAmount = 3.1,
-                projectArea = "1.5 hectares",
-                vintageYear = 2023,
-                verificationDate = "2023-10-15 14:30:22 UTC",
+                blockNumber = "${(13000000 + (currentTime / 1000).toInt() % 1000000)}",
+                creditAmount = 3.5,
+                projectArea = "2.1 hectares",
+                vintageYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR),
+                verificationDate = java.text.SimpleDateFormat(
+                    "yyyy-MM-dd HH:mm:ss 'UTC'",
+                    java.util.Locale.US
+                ).apply { timeZone = java.util.TimeZone.getTimeZone("UTC") }
+                    .format(java.util.Date(currentTime)),
                 transactionHash = "0xa3f2b9c8d1e5f7g4h6i8j0k2l4m6n8o0p2q4r6s8t0u2v4w6x8y0z1a3b5c7d9",
                 contractAddress = "0xabc123...def789",
                 network = "Aptos Mainnet",
@@ -457,14 +484,15 @@ class CarbonRepository(
                 val registrySubmission = CarbonRegistrySubmission(
                     id = it.id,
                     registrationStatus = RegistrationStatus.REGISTERED,
-                    blockNumber = "13,546,678",
+                    blockNumber = "${(13000000 + (System.currentTimeMillis() / 1000).toInt() % 1000000)}",
                     creditAmount = it.co2Value,
                     projectArea = "${it.hectaresValue} hectares",
-                    vintageYear = 2023,
+                    vintageYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR),
                     verificationDate = java.text.SimpleDateFormat(
-                        "yyyy-MM-dd HH:mm:ss UTC",
+                        "yyyy-MM-dd HH:mm:ss 'UTC'",
                         java.util.Locale.US
-                    ).format(java.util.Date()),
+                    ).apply { timeZone = java.util.TimeZone.getTimeZone("UTC") }
+                        .format(java.util.Date(System.currentTimeMillis())),
                     transactionHash = "0x${
                         java.util.UUID.randomUUID().toString().replace("-", "")
                     }",
@@ -532,25 +560,57 @@ class CarbonRepository(
                 Coordinates(lat, lon)
             } else null
 
+            // AI Classification
+            val aiResult = if (photoUri != null && landscapeClassifier != null) {
+                try {
+                    landscapeClassifier.classifyImage(Uri.parse(photoUri))
+                } catch (e: Exception) {
+                    null
+                }
+            } else null
+
+            // Determine verification status based on AI result
+            val aiLandscapeDetected = aiResult?.isLandscape ?: false
+            val aiConfidence = (aiResult?.confidence ?: 0.0) * 100.0 // Convert to percentage
+
+            // High AI confidence results in more verification markers being checked
+            val satelliteVerified = if (aiLandscapeDetected && aiConfidence >= 80.0) {
+                true
+            } else {
+                Random.nextBoolean()
+            }
+
+            val imageQualityVerified = if (aiLandscapeDetected && aiConfidence >= 70.0) {
+                true
+            } else {
+                photoUri != null
+            }
+
             val submission = UserSubmission(
                 id = "MANS-${Random.nextInt(1000, 9999)}",
                 submissionDate = System.currentTimeMillis(),
                 location = selectedSite,
-                dataQuality = if (photoUri != null && coords != null) "High" else "Medium",
+                dataQuality = if (aiLandscapeDetected && aiConfidence >= 85.0) "High"
+                else if (aiConfidence >= 60.0) "Medium"
+                else "Low",
                 status = SubmissionStatus.PENDING,
-                co2Value = Random.nextDouble(1.5, 3.5),
-                hectaresValue = Random.nextDouble(0.8, 2.0),
-                vegetationCoverage = Random.nextDouble(60.0, 90.0),
-                aiConfidence = Random.nextDouble(75.0, 95.0),
+                co2Value = aiResult?.co2Value ?: 0.0,
+                hectaresValue = aiResult?.hectaresValue ?: 0.0,
+                vegetationCoverage = aiResult?.vegetationCoverage ?: 0.0,
+                aiConfidence = aiConfidence,
                 imageUrl = photoUri,
                 coordinates = coords,
                 gpsVerified = coords != null,
-                satelliteDataVerified = Random.nextBoolean(),
-                imageQualityVerified = photoUri != null,
+                satelliteDataVerified = satelliteVerified,
+                imageQualityVerified = imageQualityVerified,
                 coordinatesWithinRange = coords != null,
                 submitterName = username,
                 submitterEmail = email,
-                notes = ""
+                notes = "",
+                aiLandscapeDetected = aiLandscapeDetected,
+                aiLandscapeCategory = aiResult?.category?.name ?: "",
+                aiAnalysisDescription = aiResult?.description ?: "",
+                aiVerificationTimestamp = if (aiResult != null) System.currentTimeMillis() else null
             )
 
             _userSubmissions.value = _userSubmissions.value + submission

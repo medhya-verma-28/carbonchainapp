@@ -38,10 +38,23 @@ android {
     }
     buildFeatures {
         compose = true
+        mlModelBinding = true
+    }
+
+    // Ensure TensorFlow Lite models are not compressed
+    aaptOptions {
+        noCompress("tflite")
+        noCompress("lite")
     }
 }
 
 dependencies {
+    // TensorFlow Lite for on-device AI
+    implementation("org.tensorflow:tensorflow-lite:2.14.0")
+    implementation("org.tensorflow:tensorflow-lite-support:0.4.4")
+    implementation("org.tensorflow:tensorflow-lite-gpu:2.14.0")
+    implementation("org.tensorflow:tensorflow-lite-metadata:0.4.4")
+
     // RunAnywhere SDK - Local AARs from GitHub Release v0.1.3-alpha
     // Core SDK (4.01MB)
     implementation(files("libs/RunAnywhereKotlinSDK-release.aar"))
