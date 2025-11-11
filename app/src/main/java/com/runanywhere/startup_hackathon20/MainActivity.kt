@@ -12,6 +12,10 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.animation.*
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount
+import com.google.android.gms.auth.api.signin.GoogleSignInClient
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -67,6 +71,26 @@ import java.io.File
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.*
+import android.content.ContentValues
+import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.os.Build
+import android.os.Environment
+import android.provider.MediaStore
+import com.itextpdf.kernel.pdf.PdfWriter
+import com.itextpdf.kernel.pdf.PdfDocument
+import com.itextpdf.layout.Document
+import com.itextpdf.layout.element.Paragraph
+import com.itextpdf.layout.element.Table
+import com.itextpdf.layout.element.Image
+import com.itextpdf.io.image.ImageDataFactory
+import com.itextpdf.kernel.colors.ColorConstants
+import com.itextpdf.kernel.colors.DeviceRgb
+import com.itextpdf.layout.properties.TextAlignment
+import com.itextpdf.layout.properties.UnitValue
+import java.io.ByteArrayOutputStream
+import java.io.FileOutputStream
 
 // Dark Theme Colors - Green-Blue Gradient Theme (Updated for better text visibility)
 val DarkBackground = Color(0xFF07151A)
@@ -148,6 +172,16 @@ fun LoginScreen(
     var passwordVisible by remember { mutableStateOf(false) }
     var isRegistering by remember { mutableStateOf(false) }
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+    
+    // Google Sign-In launcher
+    val googleSignInLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            viewModel.handleGoogleSignInResult(result.data, selectedLoginType == LoginType.ADMIN)
+        }
+    }
     
     val snackbarHostState = remember { SnackbarHostState() }
     
@@ -454,10 +488,72 @@ fun LoginScreen(
                                             }
                                         }
                                     }
-                                    
+
+                                    Spacer(Modifier.height(10.dp))
+
+                                    // Divider with "OR"
+                                    Row(
+                                        modifier = Modifier
+                                            .padding(vertical = 8.dp)
+                                            .fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center
+                                    ) {
+                                        Divider(
+                                            modifier = Modifier.weight(1f),
+                                            color = Color.White.copy(alpha = 0.1f)
+                                        )
+                                        Text(
+                                            "  OR  ",
+                                            color = TextSecondary,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Divider(
+                                            modifier = Modifier.weight(1f),
+                                            color = Color.White.copy(alpha = 0.1f)
+                                        )
+                                    }
+
+                                    Spacer(Modifier.height(4.dp))
+
+                                    // Google Sign-In Button
+                                    Button(
+                                        onClick = {
+                                            viewModel.launchGoogleSignIn(
+                                                context = context,
+                                                isAdmin = (loginType == LoginType.ADMIN),
+                                                signInLauncher = googleSignInLauncher
+                                            )
+                                        },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(48.dp),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = Color.White
+                                        ),
+                                        shape = RoundedCornerShape(8.dp),
+                                        elevation = ButtonDefaults.buttonElevation(0.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.Center
+                                        ) {
+                                            // Brand Google's logo (removed image due to linter/file issues)
+                                            Spacer(Modifier.width(10.dp))
+                                            Text(
+                                                "Sign in with Google",
+                                                color = Color.Black,
+                                                style = MaterialTheme.typography.titleMedium,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                    }
+
                                     if (loginType == LoginType.USER) {
                                         Spacer(Modifier.height(16.dp))
-                                        
+
                                         TextButton(
                                             onClick = { 
                                                 isRegistering = !isRegistering
@@ -575,6 +671,9 @@ fun BlueCarbonMonitorHomepage(
     var selectedPendingSubmission by remember { mutableStateOf<UserSubmission?>(null) }
     var selectedApprovedRegistry by remember { mutableStateOf<CarbonRegistrySubmission?>(null) }
 
+    // Profile menu state
+    var showProfileMenu by remember { mutableStateOf(false) }
+
     // Filter state for history drawer
     var historyFilter by remember { mutableStateOf<SubmissionStatus?>(null) }
 
@@ -691,6 +790,31 @@ fun BlueCarbonMonitorHomepage(
         } else {
             isGettingLocation = false
             Toast.makeText(context, "Location permission required", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // State to track pending PDF generation
+    var pendingPdfGeneration by remember { mutableStateOf(false) }
+
+    // Storage permission launcher for PDF generation
+    val storagePermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted && pendingPdfGeneration) {
+            pendingPdfGeneration = false
+            if (selectedApprovedRegistry != null && impactDashboardData != null) {
+                generateProjectPDF(
+                    context = context,
+                    registryData = selectedApprovedRegistry!!,
+                    impactData = impactDashboardData!!
+                ) { success, message ->
+                    Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                }
+            }
+        } else if (!granted) {
+            pendingPdfGeneration = false
+            Toast.makeText(context, "Storage permission required to save PDF", Toast.LENGTH_SHORT)
+                .show()
         }
     }
     fun capturePhoto() {
@@ -1449,13 +1573,67 @@ fun BlueCarbonMonitorHomepage(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
+                                // Coroutine scope for PDF generation
+                                val coroutineScope = rememberCoroutineScope()
+
                                 Button(
                                     onClick = {
-                                        Toast.makeText(
-                                            context,
-                                            "View Detailed Analysis feature coming soon!",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
+                                        // Generate PDF with all project details
+                                        if (selectedApprovedRegistry != null && impactDashboardData != null) {
+                                            // Check for storage permission (for Android versions < 10)
+                                            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+                                                when {
+                                                    ContextCompat.checkSelfPermission(
+                                                        context,
+                                                        Manifest.permission.WRITE_EXTERNAL_STORAGE
+                                                    ) == PackageManager.PERMISSION_GRANTED -> {
+                                                        // Permission already granted, generate PDF
+                                                        coroutineScope.launch {
+                                                            generateProjectPDF(
+                                                                context = context,
+                                                                registryData = selectedApprovedRegistry!!,
+                                                                impactData = impactDashboardData!!
+                                                            ) { success, message ->
+                                                                Toast.makeText(
+                                                                    context,
+                                                                    message,
+                                                                    Toast.LENGTH_LONG
+                                                                ).show()
+                                                            }
+                                                        }
+                                                    }
+
+                                                    else -> {
+                                                        // Request permission
+                                                        pendingPdfGeneration = true
+                                                        storagePermissionLauncher.launch(
+                                                            Manifest.permission.WRITE_EXTERNAL_STORAGE
+                                                        )
+                                                    }
+                                                }
+                                            } else {
+                                                // Android 10+ doesn't need WRITE_EXTERNAL_STORAGE for MediaStore
+                                                coroutineScope.launch {
+                                                    generateProjectPDF(
+                                                        context = context,
+                                                        registryData = selectedApprovedRegistry!!,
+                                                        impactData = impactDashboardData!!
+                                                    ) { success, message ->
+                                                        Toast.makeText(
+                                                            context,
+                                                            message,
+                                                            Toast.LENGTH_LONG
+                                                        ).show()
+                                                    }
+                                                }
+                                            }
+                                        } else {
+                                            Toast.makeText(
+                                                context,
+                                                "Project data not available",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
                                     },
                                     modifier = Modifier
                                         .weight(1f)
@@ -1475,9 +1653,16 @@ fun BlueCarbonMonitorHomepage(
 
                                 Button(
                                     onClick = {
+                                        // Close impact dashboard and return to Blue Carbon Monitor homepage
+                                        selectedApprovedRegistry?.id?.let { submissionId ->
+                                            viewModel.markSubmissionAsCompleted(submissionId)
+                                        }
+                                        showImpactDashboard = false
+                                        impactDashboardData = null
+                                        selectedApprovedRegistry = null
                                         Toast.makeText(
                                             context,
-                                            "Start New Monitoring Project feature coming soon!",
+                                            "Starting new monitoring project",
                                             Toast.LENGTH_SHORT
                                         ).show()
                                     },
@@ -1490,7 +1675,7 @@ fun BlueCarbonMonitorHomepage(
                                     Icon(Icons.Default.Add, null)
                                     Spacer(Modifier.width(8.dp))
                                     Text(
-                                        "Start New Monitoring Project",
+                                        "New Monitoring Project",
                                         style = MaterialTheme.typography.labelMedium,
                                         fontWeight = FontWeight.Bold,
                                         textAlign = TextAlign.Center
@@ -3044,12 +3229,118 @@ fun BlueCarbonMonitorHomepage(
                             textAlign = TextAlign.Center
                         )
                     }
-                    IconButton(onClick = { viewModel.logout() }) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ExitToApp,
-                            "Logout",
-                            tint = TextPrimary
-                        )
+
+                    // Profile Icon with Dropdown Menu
+                    Box {
+                        IconButton(onClick = { showProfileMenu = !showProfileMenu }) {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .background(PrimaryGreen.copy(alpha = 0.2f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    Icons.Default.Person,
+                                    contentDescription = "Profile",
+                                    tint = PrimaryGreen,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                        }
+
+                        DropdownMenu(
+                            expanded = showProfileMenu,
+                            onDismissRequest = { showProfileMenu = false },
+                            modifier = Modifier
+                                .background(Color(0xFF1A2F35))
+                                .border(
+                                    1.dp,
+                                    Color.White.copy(alpha = 0.1f),
+                                    RoundedCornerShape(12.dp)
+                                )
+                        ) {
+                            // User Email
+                            Column(
+                                modifier = Modifier
+                                    .padding(16.dp)
+                                    .widthIn(min = 200.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(48.dp)
+                                            .background(
+                                                PrimaryGreen.copy(alpha = 0.2f),
+                                                CircleShape
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Person,
+                                            contentDescription = null,
+                                            tint = PrimaryGreen,
+                                            modifier = Modifier.size(28.dp)
+                                        )
+                                    }
+                                    Column {
+                                        Text(
+                                            authState.username ?: "User",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = TextPrimary,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        Text(
+                                            authState.email ?: "No email",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = TextSecondary,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                }
+
+                                Divider(
+                                    modifier = Modifier.padding(vertical = 12.dp),
+                                    color = Color.White.copy(alpha = 0.1f)
+                                )
+
+                                // Logout Button
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            Icon(
+                                                Icons.AutoMirrored.Filled.ExitToApp,
+                                                contentDescription = null,
+                                                tint = Color(0xFFFF5252),
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                            Text(
+                                                "Logout",
+                                                color = Color(0xFFFF5252),
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                        }
+                                    },
+                                    onClick = {
+                                        showProfileMenu = false
+                                        viewModel.logout()
+                                    },
+                                    modifier = Modifier
+                                        .background(
+                                            Color(0xFFFF5252).copy(alpha = 0.1f),
+                                            RoundedCornerShape(8.dp)
+                                        )
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -5311,6 +5602,350 @@ fun formatNumber(number: Double): String {
 fun formatDate(timestamp: Long): String {
     val sdf = SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.US)
     return sdf.format(Date(timestamp))
+}
+
+// Function to generate PDF report with all project details
+fun generateProjectPDF(
+    context: android.content.Context,
+    registryData: CarbonRegistrySubmission,
+    impactData: ImpactDashboardData,
+    onComplete: (Boolean, String) -> Unit
+) {
+    try {
+        // Create PDF file name with timestamp
+        val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
+        val fileName = "BlueCarbon_Impact_Report_$timestamp.pdf"
+        
+        // Create file in Downloads directory
+        val pdfFile = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val resolver = context.contentResolver
+            val contentValues = ContentValues().apply {
+                put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+                put(MediaStore.MediaColumns.MIME_TYPE, "application/pdf")
+                put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+            }
+            val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
+            uri?.let { 
+                val outputStream = resolver.openOutputStream(it)
+                if (outputStream != null) {
+                    // Create PDF
+                    val writer = PdfWriter(outputStream)
+                    val pdfDocument = PdfDocument(writer)
+                    val document = Document(pdfDocument)
+                    
+                    // Add content to PDF
+                    addPDFContent(context, document, registryData, impactData)
+                    
+                    document.close()
+                    onComplete(true, "PDF saved to Downloads folder: $fileName")
+                    return
+                }
+            }
+            onComplete(false, "Failed to create PDF file")
+            return
+        } else {
+            val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+            File(downloadsDir, fileName).apply {
+                if (!downloadsDir.exists()) {
+                    downloadsDir.mkdirs()
+                }
+            }
+        }
+        
+        // For older Android versions
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            val writer = PdfWriter(pdfFile)
+            val pdfDocument = PdfDocument(writer)
+            val document = Document(pdfDocument)
+            
+            // Add content to PDF
+            addPDFContent(context, document, registryData, impactData)
+            
+            document.close()
+            
+            // Notify media scanner
+            val intent = Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE)
+            intent.data = android.net.Uri.fromFile(pdfFile)
+            context.sendBroadcast(intent)
+            
+            onComplete(true, "PDF saved to Downloads folder: $fileName")
+        }
+    } catch (e: Exception) {
+        e.printStackTrace()
+        onComplete(false, "Error generating PDF: ${e.message}")
+    }
+}
+
+private fun addPDFContent(
+    context: android.content.Context,
+    document: Document,
+    registryData: CarbonRegistrySubmission,
+    impactData: ImpactDashboardData
+) {
+    val primaryColor = DeviceRgb(14, 166, 118) // PrimaryGreen
+    val accentColor = DeviceRgb(8, 148, 180) // PrimaryBlue
+    
+    // Title
+    val title = Paragraph("Blue Carbon Monitor\nImpact Dashboard Report")
+        .setFontSize(24f)
+        .setBold()
+        .setFontColor(primaryColor)
+        .setTextAlignment(TextAlignment.CENTER)
+    document.add(title)
+    
+    document.add(Paragraph(" "))
+    
+    // Report Date
+    val reportDate = Paragraph("Generated: ${SimpleDateFormat("MMMM dd, yyyy HH:mm:ss", Locale.US).format(Date())}")
+        .setFontSize(10f)
+        .setTextAlignment(TextAlignment.CENTER)
+        .setFontColor(ColorConstants.DARK_GRAY)
+    document.add(reportDate)
+    
+    document.add(Paragraph(" "))
+    
+    // Photo Documentation Section
+    if (registryData.imageUrl != null) {
+        try {
+            val uri = android.net.Uri.parse(registryData.imageUrl)
+            val inputStream = context.contentResolver.openInputStream(uri)
+            inputStream?.use {
+                val bitmap = BitmapFactory.decodeStream(it)
+                val stream = ByteArrayOutputStream()
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 80, stream)
+                val imageData = ImageDataFactory.create(stream.toByteArray())
+                val image = Image(imageData)
+                    .setWidth(UnitValue.createPercentValue(80f))
+                    .setHorizontalAlignment(com.itextpdf.layout.properties.HorizontalAlignment.CENTER)
+                
+                document.add(Paragraph("Photo Documentation")
+                    .setFontSize(16f)
+                    .setBold()
+                    .setFontColor(accentColor))
+                document.add(image)
+                document.add(Paragraph(" "))
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            document.add(Paragraph("Photo Documentation: [Image not available]")
+                .setFontSize(12f)
+                .setItalic())
+            document.add(Paragraph(" "))
+        }
+    }
+    
+    // Project Overview
+    document.add(Paragraph("Project Overview")
+        .setFontSize(18f)
+        .setBold()
+        .setFontColor(primaryColor))
+    document.add(Paragraph(" "))
+    
+    val projectTable = Table(UnitValue.createPercentArray(floatArrayOf(1f, 2f)))
+        .useAllAvailableWidth()
+    
+    projectTable.addCell(Paragraph("Location:").setBold())
+    projectTable.addCell(Paragraph(registryData.location))
+    
+    projectTable.addCell(Paragraph("Submitter:").setBold())
+    projectTable.addCell(Paragraph(registryData.submitterName))
+    
+    projectTable.addCell(Paragraph("Email:").setBold())
+    projectTable.addCell(Paragraph(registryData.submitterEmail))
+    
+    projectTable.addCell(Paragraph("Submission Date:").setBold())
+    projectTable.addCell(Paragraph(SimpleDateFormat("MMM dd, yyyy", Locale.US).format(Date(registryData.submissionDate))))
+    
+    if (registryData.coordinates != null) {
+        projectTable.addCell(Paragraph("Coordinates:").setBold())
+        projectTable.addCell(Paragraph("Lat: ${registryData.coordinates.latitude}, Lon: ${registryData.coordinates.longitude}"))
+    }
+    
+    document.add(projectTable)
+    document.add(Paragraph(" "))
+    
+    // Impact Metrics
+    document.add(Paragraph("Impact Metrics")
+        .setFontSize(18f)
+        .setBold()
+        .setFontColor(primaryColor))
+    document.add(Paragraph(" "))
+    
+    val impactTable = Table(UnitValue.createPercentArray(floatArrayOf(1f, 1f)))
+        .useAllAvailableWidth()
+    
+    impactTable.addCell(Paragraph("Carbon Reduced").setBold())
+    impactTable.addCell(Paragraph("${impactData.carbonReduced} tCO₂"))
+    
+    impactTable.addCell(Paragraph("Market Value").setBold())
+    impactTable.addCell(Paragraph("${formatNumber(impactData.marketValue)}"))
+    
+    impactTable.addCell(Paragraph("Monitoring Period").setBold())
+    impactTable.addCell(Paragraph(impactData.monitoringPeriod))
+    
+    impactTable.addCell(Paragraph("Monitoring Date").setBold())
+    impactTable.addCell(Paragraph(impactData.monitoringDate))
+    
+    impactTable.addCell(Paragraph("Carbon Sequestered").setBold())
+    impactTable.addCell(Paragraph("${impactData.carbonSequestered} kg"))
+    
+    impactTable.addCell(Paragraph("CO₂e Reduction").setBold())
+    impactTable.addCell(Paragraph("${impactData.co2eReduction} kg"))
+    
+    impactTable.addCell(Paragraph("People Impacted").setBold())
+    impactTable.addCell(Paragraph("${NumberFormat.getNumberInstance(Locale.US).format(impactData.peopleImpacted)}"))
+    
+    impactTable.addCell(Paragraph("Trees Planted").setBold())
+    impactTable.addCell(Paragraph("${NumberFormat.getNumberInstance(Locale.US).format(impactData.treesPlanted)}"))
+    
+    document.add(impactTable)
+    document.add(Paragraph(" "))
+    
+    // Progress Indicators
+    document.add(Paragraph("Progress Indicators")
+        .setFontSize(18f)
+        .setBold()
+        .setFontColor(primaryColor))
+    document.add(Paragraph(" "))
+    
+    impactData.progressIndicators.forEach { indicator ->
+        document.add(Paragraph("${indicator.name}: ${indicator.percentage}%")
+            .setFontSize(12f))
+    }
+    document.add(Paragraph(" "))
+    
+    // Environmental Health
+    document.add(Paragraph("Environmental Health")
+        .setFontSize(18f)
+        .setBold()
+        .setFontColor(primaryColor))
+    document.add(Paragraph(" "))
+    
+    impactData.environmentalHealth.forEach { metric ->
+        document.add(Paragraph("${metric.name}: ${metric.status}")
+            .setFontSize(12f))
+    }
+    document.add(Paragraph(" "))
+    
+    // Community Benefits
+    document.add(Paragraph("Community Benefits")
+        .setFontSize(18f)
+        .setBold()
+        .setFontColor(primaryColor))
+    document.add(Paragraph(" "))
+    
+    document.add(Paragraph("Families Supported: ${impactData.communityBenefits.familiesToSupported}")
+        .setFontSize(12f))
+    document.add(Paragraph("Jobs Created: ${impactData.communityBenefits.jobsCreated}")
+        .setFontSize(12f))
+    document.add(Paragraph(" "))
+    
+    // Monitoring Details
+    document.add(Paragraph("Monitoring Details")
+        .setFontSize(18f)
+        .setBold()
+        .setFontColor(primaryColor))
+    document.add(Paragraph(" "))
+    
+    val monitoringTable = Table(UnitValue.createPercentArray(floatArrayOf(1f, 1f)))
+        .useAllAvailableWidth()
+    
+    monitoringTable.addCell(Paragraph("Duration of Project").setBold())
+    monitoringTable.addCell(Paragraph(impactData.monitoringDetails.durationOfProject))
+    
+    monitoringTable.addCell(Paragraph("Next Monitoring").setBold())
+    monitoringTable.addCell(Paragraph(impactData.monitoringDetails.nextMonitoring))
+    
+    monitoringTable.addCell(Paragraph("Last Reported").setBold())
+    monitoringTable.addCell(Paragraph(impactData.monitoringDetails.lastReported))
+    
+    monitoringTable.addCell(Paragraph("Project Membership").setBold())
+    monitoringTable.addCell(Paragraph(impactData.monitoringDetails.currentProjectMembership))
+    
+    document.add(monitoringTable)
+    document.add(Paragraph(" "))
+    
+    // Blockchain Registry Details
+    document.add(Paragraph("Blockchain Registry Details")
+        .setFontSize(18f)
+        .setBold()
+        .setFontColor(primaryColor))
+    document.add(Paragraph(" "))
+    
+    val blockchainTable = Table(UnitValue.createPercentArray(floatArrayOf(1f, 2f)))
+        .useAllAvailableWidth()
+    
+    blockchainTable.addCell(Paragraph("Registration Status:").setBold())
+    blockchainTable.addCell(Paragraph(registryData.registrationStatus.toString()))
+    
+    blockchainTable.addCell(Paragraph("Block Number:").setBold())
+    blockchainTable.addCell(Paragraph(registryData.blockNumber))
+    
+    blockchainTable.addCell(Paragraph("Credit Amount:").setBold())
+    blockchainTable.addCell(Paragraph("${registryData.creditAmount} tonnes CO₂"))
+    
+    blockchainTable.addCell(Paragraph("Project Area:").setBold())
+    blockchainTable.addCell(Paragraph(registryData.projectArea))
+    
+    blockchainTable.addCell(Paragraph("Vintage Year:").setBold())
+    blockchainTable.addCell(Paragraph(registryData.vintageYear.toString()))
+    
+    blockchainTable.addCell(Paragraph("Verification Date:").setBold())
+    blockchainTable.addCell(Paragraph(registryData.verificationDate))
+    
+    blockchainTable.addCell(Paragraph("Transaction Hash:").setBold())
+    blockchainTable.addCell(Paragraph(registryData.transactionHash))
+    
+    blockchainTable.addCell(Paragraph("Contract Address:").setBold())
+    blockchainTable.addCell(Paragraph(registryData.contractAddress))
+    
+    blockchainTable.addCell(Paragraph("Network:").setBold())
+    blockchainTable.addCell(Paragraph(registryData.network))
+    
+    blockchainTable.addCell(Paragraph("Token Standard:").setBold())
+    blockchainTable.addCell(Paragraph(registryData.tokenStandard))
+    
+    document.add(blockchainTable)
+    document.add(Paragraph(" "))
+    
+    // Audit Trail
+    if (registryData.auditTrail.isNotEmpty()) {
+        document.add(Paragraph("Audit Trail")
+            .setFontSize(18f)
+            .setBold()
+            .setFontColor(primaryColor))
+        document.add(Paragraph(" "))
+        
+        registryData.auditTrail.forEach { audit ->
+            val status = if (audit.completed) "✓" else "○"
+            document.add(Paragraph("$status ${audit.description}")
+                .setFontSize(11f))
+        }
+        document.add(Paragraph(" "))
+    }
+    
+    // Sustainability Message
+    document.add(Paragraph("Sustainability Impact")
+        .setFontSize(18f)
+        .setBold()
+        .setFontColor(primaryColor))
+    document.add(Paragraph(" "))
+    
+    document.add(Paragraph(impactData.sustainabilityMessage)
+        .setFontSize(11f)
+        .setItalic())
+    
+    document.add(Paragraph(" "))
+    document.add(Paragraph(" "))
+    
+    // Footer
+    document.add(Paragraph("---")
+        .setTextAlignment(TextAlignment.CENTER)
+        .setFontColor(ColorConstants.LIGHT_GRAY))
+    document.add(Paragraph("Blue Carbon Monitor - Environmental Impact Tracking System")
+        .setFontSize(9f)
+        .setTextAlignment(TextAlignment.CENTER)
+        .setFontColor(ColorConstants.DARK_GRAY))
 }
 
 enum class Screen(val title: String, val icon: ImageVector) {

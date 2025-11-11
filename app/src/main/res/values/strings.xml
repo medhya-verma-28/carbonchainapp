@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">startup_hackathon2.0</string>
+
+    <!-- Firebase Google Sign-In Web Client ID -->
+    <!-- TODO: Replace with actual Web Client ID from Firebase Console -->
+    <!-- Get it from: Firebase Console → Project Settings → General → Your apps → Web app -->
+    <string name="default_web_client_id">YOUR_WEB_CLIENT_ID_HERE</string>
 </resources>

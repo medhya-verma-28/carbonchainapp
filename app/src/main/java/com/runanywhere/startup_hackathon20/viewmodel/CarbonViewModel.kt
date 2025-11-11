@@ -7,6 +7,7 @@ import com.runanywhere.startup_hackathon20.ai.LandscapeClassifier
 import com.runanywhere.startup_hackathon20.blockchain.BlockchainService
 import com.runanywhere.startup_hackathon20.data.*
 import com.runanywhere.startup_hackathon20.repository.CarbonRepository
+import com.runanywhere.startup_hackathon20.firebase.FirebaseAuthService
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -19,6 +20,7 @@ class CarbonViewModel(context: Context) : ViewModel() {
     private val blockchainService = BlockchainService()
     private val landscapeClassifier = LandscapeClassifier(context)
     private val repository = CarbonRepository(blockchainService, landscapeClassifier)
+    private val firebaseAuth = FirebaseAuthService(context)
 
     // State flows from repository
     val projects = repository.projects
@@ -177,51 +179,102 @@ class CarbonViewModel(context: Context) : ViewModel() {
     fun login(username: String, password: String, isAdmin: Boolean) {
         viewModelScope.launch {
             _uiState.value = UiState.Loading
-            delay(1000) // Simulate API call
+            val result = firebaseAuth.login(username, password)
+            result.fold(
+                onSuccess = { user ->
+                    _authState.value = AuthState(
+                        isAuthenticated = true,
+                        userType = if (isAdmin) UserType.ADMIN else UserType.USER,
+                        username = user.displayName,
+                        email = user.email
+                    )
+                    _uiState.value =
+                        UiState.Success("Login successful! Welcome ${user.displayName}")
+                },
+                onFailure = { error ->
+                    _uiState.value = UiState.Error(error.message ?: "Login failed")
+                }
+            )
+        }
+    }
 
-            // Simple authentication logic (replace with real authentication in production)
-            val isValid = if (isAdmin) {
-                username == "admin" && password == "admin123"
-            } else {
-                username.isNotBlank() && password.length >= 6
-            }
+    /**
+     * Handle Google Sign-In
+     */
+    fun getGoogleSignInIntent(): android.content.Intent {
+        return firebaseAuth.getGoogleSignInIntent()
+    }
 
-            if (isValid) {
-                _authState.value = AuthState(
-                    isAuthenticated = true,
-                    userType = if (isAdmin) UserType.ADMIN else UserType.USER,
-                    username = username
-                )
-                _uiState.value = UiState.Success("Login successful! Welcome $username")
-            } else {
-                _uiState.value = UiState.Error("Invalid credentials. Please try again.")
+    /**
+     * Launch Google Sign-In flow
+     */
+    fun launchGoogleSignIn(
+        context: Context,
+        isAdmin: Boolean,
+        signInLauncher: androidx.activity.result.ActivityResultLauncher<android.content.Intent>
+    ) {
+        try {
+            val signInIntent = firebaseAuth.getGoogleSignInIntent()
+            signInLauncher.launch(signInIntent)
+        } catch (e: Exception) {
+            viewModelScope.launch {
+                _uiState.value = UiState.Error("Failed to launch Google Sign-In: ${e.message}")
             }
         }
     }
 
+    /**
+     * Process Google Sign-In result
+     */
+    fun handleGoogleSignInResult(data: android.content.Intent?, isAdmin: Boolean = false) {
+        viewModelScope.launch {
+            _uiState.value = UiState.Loading
+            val result = firebaseAuth.handleGoogleSignInResult(data)
+            result.fold(
+                onSuccess = { user ->
+                    _authState.value = AuthState(
+                        isAuthenticated = true,
+                        userType = if (isAdmin) UserType.ADMIN else UserType.USER,
+                        username = user.displayName,
+                        email = user.email
+                    )
+                    _uiState.value =
+                        UiState.Success("Login successful! Welcome ${user.displayName}")
+                },
+                onFailure = { error ->
+                    _uiState.value = UiState.Error(error.message ?: "Google Sign-In failed")
+                }
+            )
+        }
+    }
+
     fun logout() {
-        _authState.value = AuthState()
-        _uiState.value = UiState.Success("Logged out successfully")
+        viewModelScope.launch {
+            firebaseAuth.logout()
+            _authState.value = AuthState()
+            _uiState.value = UiState.Success("Logged out successfully")
+        }
     }
 
     fun register(username: String, email: String, password: String) {
         viewModelScope.launch {
             _uiState.value = UiState.Loading
-            delay(1500) // Simulate API call
-
-            // Simple validation (replace with real registration in production)
-            if (username.length >= 3 && email.contains("@") && password.length >= 6) {
-                _authState.value = AuthState(
-                    isAuthenticated = true,
-                    userType = UserType.USER,
-                    username = username,
-                    email = email
-                )
-                _uiState.value = UiState.Success("Registration successful! Welcome $username")
-            } else {
-                _uiState.value =
-                    UiState.Error("Invalid registration details. Please check and try again.")
-            }
+            val result = firebaseAuth.register(username, email, password)
+            result.fold(
+                onSuccess = { user ->
+                    _authState.value = AuthState(
+                        isAuthenticated = true,
+                        userType = UserType.USER,
+                        username = user.displayName,
+                        email = user.email
+                    )
+                    _uiState.value =
+                        UiState.Success("Registration successful! Welcome ${user.displayName}")
+                },
+                onFailure = { error ->
+                    _uiState.value = UiState.Error(error.message ?: "Registration failed")
+                }
+            )
         }
     }
 
