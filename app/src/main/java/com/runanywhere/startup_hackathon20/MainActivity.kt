@@ -187,6 +187,10 @@ fun LoginScreen(
     
     LaunchedEffect(uiState) {
         when (uiState) {
+            is UiState.Success -> {
+                snackbarHostState.showSnackbar((uiState as UiState.Success).message)
+                viewModel.clearUiState()
+            }
             is UiState.Error -> {
                 snackbarHostState.showSnackbar((uiState as UiState.Error).message)
                 viewModel.clearUiState()

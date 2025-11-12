@@ -45,8 +45,8 @@ android {
 
     // Ensure TensorFlow Lite models are not compressed
     aaptOptions {
-        noCompress("tflite")
-        noCompress("lite")
+        noCompress(noCompress = "tflite")
+        noCompress(noCompress = "lite")
     }
 }
 
@@ -92,12 +92,15 @@ dependencies {
     // Multidex support
     implementation("androidx.multidex:multidex:2.0.1")
 
-    // Firebase
-    implementation(platform("com.google.firebase:firebase-bom:32.7.0"))
-    implementation("com.google.firebase:firebase-auth-ktx")
-    implementation("com.google.firebase:firebase-firestore-ktx")
-    implementation("com.google.firebase:firebase-analytics-ktx")
-    implementation("com.google.firebase:firebase-storage-ktx")
+    // Firebase - explicit versions for compatibility
+    implementation("com.google.firebase:firebase-auth:23.1.0")
+    implementation("com.google.firebase:firebase-firestore:25.1.1")
+    implementation("com.google.firebase:firebase-analytics:22.1.2")
+    implementation("com.google.firebase:firebase-storage:21.0.1")
+    implementation("com.google.firebase:firebase-common-ktx:21.0.0")
+
+    // Coroutines support for Firebase
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.10.2")
 
     // Google Sign-In
     implementation("com.google.android.gms:play-services-auth:20.7.0")

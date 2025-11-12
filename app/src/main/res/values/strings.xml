@@ -2,7 +2,6 @@
     <string name="app_name">startup_hackathon2.0</string>
 
     <!-- Firebase Google Sign-In Web Client ID -->
-    <!-- TODO: Replace with actual Web Client ID from Firebase Console -->
-    <!-- Get it from: Firebase Console → Project Settings → General → Your apps → Web app -->
-    <string name="default_web_client_id">YOUR_WEB_CLIENT_ID_HERE</string>
+    <!-- This is the Web Client ID (client_type 3) from google-services.json -->
+    <string name="default_web_client_id">441252740217-afn739n1l531lkd5bn7a3f9psuqnetk0.apps.googleusercontent.com</string>
 </resources>
