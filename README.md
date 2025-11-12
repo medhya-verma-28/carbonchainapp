@@ -41,7 +41,7 @@ modern dark theme with green-blue gradient and glass effects.
     - GPS verification
     - Satellite data cross-referencing
     - Image quality standards
-    - Detailed submission analysis
+    - Detailed submission analysis using our AI model built through TensorFlow
   - **Blockchain Publishing**: Approved submissions automatically generate blockchain registry
     entries
   - **User Notification**: Users see their submissions reflected in History with updated status
