@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">startup_hackathon2.0</string>
+    <string name="app_name">CarbonChain+</string>
 
     <!-- Firebase Google Sign-In Web Client ID -->
     <!-- This is the Web Client ID (client_type 3) from google-services.json -->
